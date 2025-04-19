@@ -4,8 +4,34 @@ from utils.service import get_service
 logger = logging.getLogger(__name__)
 
 class BaseTable:
-    def __init__(self, spreadsheet_url, sheet_name):
-        self.spreadsheet_url = spreadsheet_url
+    """
+    Базовый класс для работы с Google Sheets.
+
+    Предоставляет функциональность для:
+    - Проверки и создания листа, если он не существует.
+    - Получения идентификаторов таблицы и листа.
+    - Определения последней непустой строки.
+    - Обновления данных в ячейках.
+    - Применения стилей и границ к диапазону ячеек.
+
+    Атрибуты:
+        spreadsheet_url (str): URL Google-таблицы.
+        sheet_name (str): Название листа, с которым будет происходить работа.
+        service (Resource): Авторизованный Google Sheets API клиент.
+        spreadsheet_id (str): ID таблицы, извлечённый из URL.
+        sheet_id (int): Числовой идентификатор листа.
+
+    Методы:
+        ensure_sheet_exists(): Проверяет существование листа, создаёт при отсутствии.
+        get_spreadsheet_id(): Возвращает ID таблицы из URL.
+        get_sheet_id(): Получает числовой ID листа по названию.
+        get_last_non_empty_row(): Возвращает индекс последней непустой строки в столбце B.
+        apply_styles(start_row, end_row, start_col, end_col, color): Применяет стили и границы к диапазону ячеек.
+        update_data(range_name, values): Обновляет данные в заданном диапазоне листа.
+    """
+    def __init__(self, build_object, sheet_name):
+        self.build_object = build_object
+        self.spreadsheet_url = build_object.sh_url
         self.sheet_name = sheet_name
         self.service = get_service()
         self.spreadsheet_id = self.get_spreadsheet_id()
@@ -57,7 +83,7 @@ class BaseTable:
             return None
 
     def get_last_non_empty_row(self):
-        """Возвращает индекс последней непустой строки в столбце A"""
+        """Возвращает индекс последней непустой строки в столбце B"""
         try:
             range_name = f"{self.sheet_name}!B1:B"
             result = self.service.spreadsheets().values().get(
@@ -69,6 +95,12 @@ class BaseTable:
         except Exception as e:
             logger.error(f"Ошибка при получении последней непустой строки: {e}")
             return 0
+
+    def get_workers_for_build_object(self):
+        """Возвращает всех пользователей, связанных с объектом строительства"""
+        from buildings.models import Worker  # Импортируем модель внутри метода, чтобы избежать циклических зависимостей
+        workers = Worker.objects.filter(build_obj=self.build_object)
+        return workers
 
     def apply_styles(self, start_row, end_row, start_col, end_col, color):
         requests = [
@@ -116,4 +148,3 @@ class BaseTable:
             body=body,
             valueInputOption='USER_ENTERED'
         ).execute()
-
