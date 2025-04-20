@@ -82,19 +82,30 @@ class BaseTable:
             logger.error(f"Ошибка при получении sheetId для '{self.sheet_name}': {e}")
             return None
 
-    def get_last_non_empty_row(self):
-        """Возвращает индекс последней непустой строки в столбце B"""
+
+    def get_last_non_empty_row(self, column_letter='B'):
+        """
+        Возвращает индекс последней непустой строки в указанном столбце.
+
+        Args:
+            column_letter (str): Буква столбца (например, 'A', 'B').
+
+        Returns:
+            int: Индекс последней непустой строки (начиная с 1).
+        """
         try:
-            range_name = f"{self.sheet_name}!B1:B"
+            range_name = f"{self.sheet_name}!{column_letter}1:{column_letter}"
             result = self.service.spreadsheets().values().get(
                 spreadsheetId=self.spreadsheet_id,
                 range=range_name
             ).execute()
             values = result.get('values', [])
+            print(f'get_last_non_empty_row values: {values}')
             return len(values) if values else 0
         except Exception as e:
-            logger.error(f"Ошибка при получении последней непустой строки: {e}")
+            logger.error(f"Ошибка при получении последней непустой строки в столбце {column_letter}: {e}")
             return 0
+
 
     def get_workers_for_build_object(self):
         """Возвращает всех пользователей, связанных с объектом строительства"""
