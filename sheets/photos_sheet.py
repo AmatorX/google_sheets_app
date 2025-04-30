@@ -12,11 +12,11 @@ class PhotosTable(BaseTable):
     Класс для работы с фотоотчётами в Google Таблице.
     Создаёт таблицы по пользователям на листе формата 'photos_<месяц>_<год>'.
     """
-    
+
     def __init__(self, build_object):
         self.build_object = build_object
         self.sheet_name = self.generate_sheet_name()
-        self.spreadsheet_url = self.build_object.sh_url
+        self.sh_url = self.build_object.sh_url
         super().__init__(build_object, sheet_name=self.sheet_name)
 
     def generate_sheet_name(self):
@@ -82,10 +82,8 @@ class PhotosTable(BaseTable):
         if worker_tables:
             self.batch_update_columns(worker_tables)
 
-        # Цвет для таблиц
-        color = {'red': 0.85, 'green': 0.93, 'blue': 0.98}
         for start_row, end_row, start_col, end_col in style_ranges:
-            self.apply_styles(start_row, end_row, start_col, end_col, color=color)
+            self.apply_styles(start_row, end_row, start_col, end_col)
 
     def create_worker_data(self, worker_name, start_row=None):
 

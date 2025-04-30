@@ -1,4 +1,5 @@
 import logging
+from typing import List, Any
 from utils.service import get_service
 
 logger = logging.getLogger(__name__)
@@ -15,7 +16,7 @@ class BaseTable:
     - Применения стилей и границ к диапазону ячеек.
 
     Атрибуты:
-        spreadsheet_url (str): URL Google-таблицы.
+        sh_url (str): URL Google-таблицы.
         sheet_name (str): Название листа, с которым будет происходить работа.
         service (Resource): Авторизованный Google Sheets API клиент.
         spreadsheet_id (str): ID таблицы, извлечённый из URL.
@@ -29,9 +30,10 @@ class BaseTable:
         apply_styles(start_row, end_row, start_col, end_col, color): Применяет стили и границы к диапазону ячеек.
         update_data(range_name, values): Обновляет данные в заданном диапазоне листа.
     """
-    def __init__(self, build_object, sheet_name):
+    def __init__(self, build_object=None, sheet_name=None):
+    # def __init__(self, build_object, sheet_name):
         self.build_object = build_object
-        self.spreadsheet_url = build_object.sh_url
+        self.sh_url = build_object.sh_url
         self.sheet_name = sheet_name
         self.service = get_service()
         self.spreadsheet_id = self.get_spreadsheet_id()
@@ -67,7 +69,7 @@ class BaseTable:
 
     def get_spreadsheet_id(self):
         """Возвращает ID таблицы из URL"""
-        return self.spreadsheet_url.split("/")[5]
+        return self.sh_url.split("/")[5]
 
     def get_sheet_id(self):
         """Получает sheetId по названию листа"""
@@ -113,7 +115,8 @@ class BaseTable:
         workers = Worker.objects.filter(build_obj=self.build_object)
         return workers
 
-    def apply_styles(self, start_row, end_row, start_col, end_col, color):
+    def apply_styles(self, start_row, end_row, start_col, end_col):
+        color = {'red': 0.85, 'green': 0.93, 'blue': 0.98}
         requests = [
             {
                 'repeatCell': {

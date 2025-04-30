@@ -45,8 +45,7 @@ class WorkTimeTable(BaseTable):
         logger.info(f"Таблица 'Work Time' обновлена: {len(rows)} работников, строки {start_row}-{row_index}")
 
         # Стили
-        color = {'red': 0.85, 'green': 0.93, 'blue': 0.98}
-        self.apply_styles(start_row, row_index, 0, len(headers), color)
+        self.apply_styles(start_row, row_index, 0, len(headers))
         print(f'Таблица для объекта {self.build_object.name} создана\n')
 
     def remove_existing_chunk_if_exists(self, chunk):
