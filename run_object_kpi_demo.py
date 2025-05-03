@@ -1,0 +1,30 @@
+import os
+import django
+
+# Настройка Django
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tsa.settings")
+django.setup()
+
+from buildings.models import BuildObject
+from sheets.object_kpi_sheet import ObjectKPITable
+
+def main():
+    build_objects = BuildObject.objects.all()
+
+    if not build_objects.exists():
+        print("Нет доступных объектов.")
+        return
+
+    for obj in build_objects:
+        print(f"\n--- Объект: {obj.name} ---")
+        try:
+            table = ObjectKPITable(obj)
+            table.ensure_sheet_exists()
+            table.ensure_headers()  
+            table.write_today_row()         # Записываем расчёты
+            print("Данные успешно записаны.")
+        except Exception as e:
+            print(f"Ошибка при обработке объекта '{obj.name}': {e}")
+
+if __name__ == "__main__":
+    main()
