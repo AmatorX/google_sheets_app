@@ -64,7 +64,7 @@ class Material(models.Model):
 
 class BuildObject(models.Model):
     name = models.CharField(max_length=255)
-    total_budget = models.FloatField(null=True, blank=True)
+    total_budget = models.FloatField()
     material = models.ManyToManyField('Material', related_name='build_objects')
     sh_url = models.URLField(null=True, blank=True)
 

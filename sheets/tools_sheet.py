@@ -10,7 +10,7 @@ class ToolsTable(BaseTable):
         self.sh_url = tools_sheet.sh_url
         self.sheet_name = tools_sheet.name
         self.header = ["Tool name", "Tool ID", "Price", "Date of issue", "Assigned to"]
-        super().__init__(build_object=tools_sheet, sheet_name = self.sheet_name)
+        super().__init__(obj=tools_sheet, sheet_name = self.sheet_name)
 
 
     def get_tools_data(self) -> List[List[str]]:

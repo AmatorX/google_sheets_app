@@ -7,6 +7,9 @@ from .models import Worker, BuildObject, Material, Tool, ToolsSheet
 # from ..utils.add_users_to_work_time import append_user_names_to_tables
 from django.contrib.admin import SimpleListFilter
 
+from django.contrib import admin
+from .models import BuildObject
+
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +81,6 @@ class ToolsSheetAdmin(admin.ModelAdmin):
 
 
 class BuildObjectAdmin(admin.ModelAdmin):
-    # actions = [run_update_users_kpi, create_kpi_tables_in_sheet1, run_update_building_kpi, create_work_time_table, create_photos_table_handle, create_expenses_materials_and_KPI_object]
     fields = ('name', 'total_budget', 'material', 'sh_url')
     list_display = ('name', 'total_budget', 'display_materials')
 
@@ -88,16 +90,8 @@ class BuildObjectAdmin(admin.ModelAdmin):
     display_materials.short_description = 'Materials'
 
 
-# @admin.register(BuildObject)
-# class BuildObjectAdmin(admin.ModelAdmin):
-#     actions = [run_update_users_kpi, run_update_building_kpi, create_work_time_table]
-
-
 admin.site.register(Worker, WorkerAdmin)
 admin.site.register(BuildObject, BuildObjectAdmin)
 admin.site.register(Material, MaterialAdmin)
 admin.site.register(ToolsSheet, ToolsSheetAdmin)
 admin.site.register(Tool, ToolAdmin)
-
-
-

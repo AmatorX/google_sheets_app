@@ -30,10 +30,10 @@ class BaseTable:
         apply_styles(start_row, end_row, start_col, end_col, color): Применяет стили и границы к диапазону ячеек.
         update_data(range_name, values): Обновляет данные в заданном диапазоне листа.
     """
-    def __init__(self, build_object=None, sheet_name=None):
+    def __init__(self, obj=None, sheet_name=None):
     # def __init__(self, build_object, sheet_name):
-        self.build_object = build_object
-        self.sh_url = build_object.sh_url
+        self.obj = obj
+        self.sh_url = obj.sh_url
         self.sheet_name = sheet_name
         self.service = get_service()
         self.spreadsheet_id = self.get_spreadsheet_id()
@@ -102,7 +102,7 @@ class BaseTable:
                 range=range_name
             ).execute()
             values = result.get('values', [])
-            print(f'get_last_non_empty_row values: {values}')
+            print(f'get_last_non_empty_row values: {len(values) if values else 0}')
             return len(values) if values else 0
         except Exception as e:
             logger.error(f"Ошибка при получении последней непустой строки в столбце {column_letter}: {e}")

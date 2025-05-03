@@ -259,7 +259,7 @@ if __name__ == "__main__":
     for build_object in build_objects:
         try:
             print(f'Работаем с объектом {build_object.name}')
-            worktime_table = WorkTimeTable(build_object=build_object)
+            worktime_table = WorkTimeTable(obj=build_object)
 
             # Убедимся, что лист существует
             worktime_table.ensure_sheet_exists()

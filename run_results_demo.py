@@ -14,7 +14,7 @@ if __name__ == "__main__":
     for build_object in build_objects:
         try:
             print(f"Обрабатываем объект: {build_object.name}")
-            results_table = ResultsTable(build_object=build_object)
+            results_table = ResultsTable(obj=build_object)
 
             # Убедимся, что лист существует
             results_table.ensure_sheet_exists()

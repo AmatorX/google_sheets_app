@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class WorkTimeTable(BaseTable):
-    def __init__(self, build_object, sheet_name='Work Time'):
-        super().__init__(build_object, sheet_name)
+    def __init__(self, obj, sheet_name='Work Time'):
+        super().__init__(obj, sheet_name)
 
     def create_table(self, date_chunk, rows):
         """
@@ -163,58 +163,3 @@ class WorkTimeTable(BaseTable):
               f'chunk: {chunk}\n'
               f'rows: {rows}')
         return chunk, rows
-
-    # @staticmethod
-    # def generate_current_chunk_data_and_rows():
-    #     """
-    #     Генерирует чанк и данные для текущего 14-дневного периода.
-    #     Может использоваться извне для подготовки данных.
-    #     """
-    #     chunk = create_chunk_data(full_list=False)
-    #     rows = build_worktime_rows(chunk)
-    #     print(f'generate_current_chunk_data_and_rows вернул \n'
-    #           f'chunk: {chunk}\n'
-    #           f'rows: {rows}')
-    #     return chunk, rows
-
-
-
-# def build_worktime_rows(chunk_data):
-#     """
-#     Генерирует rows (список словарей) для таблицы рабочих часов на основе WorkEntry и данных чанка.
-#     """
-#     from datetime import datetime
-#
-#     # Преобразуем chunk_data в список дат
-#     year = datetime.now().year
-#     dates = []
-#     for month_name, weekday, day_str in chunk_data:
-#         day = int(day_str)
-#         month = list(calendar.month_name).index(month_name)
-#         date_obj = datetime(year, month, day).date()
-#         dates.append(date_obj)
-#
-#     # Получаем все записи WorkEntry в пределах этих дат
-#     work_entries = WorkEntry.objects.filter(date__in=dates).select_related("worker")
-#
-#     # Структура: {worker_id: {date: hours}}
-#     worker_data = defaultdict(lambda: defaultdict(float))
-#     per_hour_map = {}
-#
-#     for entry in work_entries:
-#         worker = entry.worker
-#         worker_data[worker.id][entry.date] += float(entry.worked_hours)
-#         per_hour_map[worker.id] = worker.salary  # или другой способ получить ставку
-#
-#     # Формируем rows
-#     rows = []
-#     for worker_id, date_hours in worker_data.items():
-#         user_name = WorkEntry.objects.filter(worker_id=worker_id).first().worker.name
-#         work_hours = [date_hours.get(date, 0) for date in dates]
-#         rows.append({
-#             "per_hour": per_hour_map[worker_id],
-#             "user_name": user_name,
-#             "work_hours": work_hours
-#         })
-#
-#     return rows

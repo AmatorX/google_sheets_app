@@ -13,11 +13,11 @@ class PhotosTable(BaseTable):
     Создаёт таблицы по пользователям на листе формата 'photos_<месяц>_<год>'.
     """
 
-    def __init__(self, build_object):
-        self.build_object = build_object
+    def __init__(self, obj):
+        self.build_object = obj
         self.sheet_name = self.generate_sheet_name()
         self.sh_url = self.build_object.sh_url
-        super().__init__(build_object, sheet_name=self.sheet_name)
+        super().__init__(obj, sheet_name=self.sheet_name)
 
     def generate_sheet_name(self):
         """

@@ -15,11 +15,11 @@ class ResultsTable(BaseTable):
     Создает отчеты по работникам, использованным материалам и заработку за месяц.
     """
 
-    def __init__(self, build_object):
-        self.build_object = build_object
+    def __init__(self, obj):
+        self.build_object = obj
         self.sheet_name = self.generate_sheet_name()
         self.sh_url = self.build_object.sh_url
-        super().__init__(build_object, sheet_name=self.sheet_name)
+        super().__init__(obj, sheet_name=self.sheet_name)
 
     def generate_sheet_name(self) -> str:
         """
