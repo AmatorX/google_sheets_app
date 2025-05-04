@@ -40,7 +40,6 @@ class ToolsTable(BaseTable):
         """
         Создаёт или обновляет таблицу инструментов на листе и применяет стили.
         """
-        print(f"Вызов метода проверки наличия и создания таблицы create_or_update_sheet")
         self.ensure_sheet_exists()
         values = self.build_table()
 

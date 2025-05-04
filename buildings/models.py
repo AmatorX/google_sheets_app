@@ -65,19 +65,18 @@ class Material(models.Model):
 class BuildObject(models.Model):
     name = models.CharField(max_length=255)
     total_budget = models.FloatField()
+    current_budget = models.FloatField(default=0)
     material = models.ManyToManyField('Material', related_name='build_objects')
     sh_url = models.URLField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and self.current_budget == 0:
+            self.current_budget = self.total_budget
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
 
-
-# class ToolsSheet(models.Model):
-#     name = models.CharField(max_length=255)
-#     sh_url = models.URLField(null=True, blank=True)
-#
-#     def __str__(self):
-#         return self.name
 
 class ToolsSheet(models.Model):
     name = models.CharField(max_length=255)
@@ -151,3 +150,13 @@ class WorkEntry(models.Model):
         worker_name = self.worker.name if self.worker else "Unknown Worker"
         build_object_name = self.build_object.name if self.build_object else "Unknown Object"
         return f"Worker: {worker_name}, Object: {build_object_name}, Date: {self.date}"
+
+
+class BuildBudgetHistory(models.Model):
+    build_object = models.ForeignKey('BuildObject', on_delete=models.CASCADE, related_name='budget_history')
+    date = models.DateField()
+    current_budget = models.FloatField()
+
+    class Meta:
+        unique_together = ('build_object', 'date')  # На каждый день одна запись
+        ordering = ['date']

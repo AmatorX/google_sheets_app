@@ -3,7 +3,7 @@ from decimal import Decimal
 
 
 from sheets.base_sheet import BaseTable
-from buildings.models import WorkEntry, Material
+from buildings.models import WorkEntry, Material, BuildBudgetHistory
 
 
 class ObjectKPITable(BaseTable):
@@ -14,7 +14,7 @@ class ObjectKPITable(BaseTable):
     def __init__(self, build_object):
         self.obj = build_object
         self.sheet_name = "Object KPI"
-        self.budget = build_object.total_budget
+        self.current_budget = build_object.current_budget
         current_month = datetime.now().strftime("%B")
         self.header = [
             current_month,
@@ -23,7 +23,7 @@ class ObjectKPITable(BaseTable):
             "Total left %",
             "Budget balance"
         ]
-        self.header2 = [" ", " ", " ", " ", self.budget]
+        self.header2 = [" ", " ", " ", " ", self.current_budget]
         self.sheet_range = f"{self.sheet_name}!A1"
         super().__init__(build_object, sheet_name=self.sheet_name)
 
@@ -41,7 +41,7 @@ class ObjectKPITable(BaseTable):
         print(f"метод get_done_today_dollars entries: {entries}")
 
         for entry in entries:
-            materials = entry.get_materials_used()  # -> словарь, например {'Hardie Plank': 5, 'Nails': 100}
+            materials = entry.get_materials_used()
             for material_name, qty in materials.items():
                 price = self.get_material_price(material_name)
                 total += Decimal(qty) * Decimal(price)
@@ -59,13 +59,26 @@ class ObjectKPITable(BaseTable):
             print(f"Цена для материала '{name}' не найдена, возвращаем 0")
             return 0
 
+    # def update_budget(self, done_today_dollars):
+    #     """
+    #     Обновляет бюджет, исходя из текущей стоимости работ.
+    #     """
+    #     new_budget = self.obj.current_budget - done_today_dollars
+    #     self.obj.current_budget = new_budget
+    #     self.obj.save()
+
     def update_budget(self, done_today_dollars):
-        """
-        Обновляет бюджет, исходя из текущей стоимости работ.
-        """
-        new_budget = self.obj.total_budget - done_today_dollars
-        self.obj.total_budget = new_budget
-        self.obj.save()
+        today = date.today()
+        last_entry = self.obj.budget_history.order_by('-date').first()
+        previous_budget = last_entry.current_budget if last_entry else self.obj.total_budget
+
+        new_budget = previous_budget - done_today_dollars
+
+        BuildBudgetHistory.objects.update_or_create(
+            build_object=self.obj,
+            date=today,
+            defaults={'current_budget': new_budget}
+        )
 
     def ensure_headers(self):
         """
@@ -97,9 +110,9 @@ class ObjectKPITable(BaseTable):
         day_of_month = today.day
 
         done_today = self.get_done_today_dollars()
-        budget_before = self.obj.total_budget
+        budget_before = self.obj.current_budget
 
-        budget_after = self.obj.total_budget
+        budget_after = self.obj.current_budget
         done_percent = (done_today / budget_before * 100) if budget_before else 0
         left_percent = (budget_after / budget_before * 100) if budget_before else 0
 
@@ -149,5 +162,3 @@ class ObjectKPITable(BaseTable):
         self.apply_styles(start_row, end_row, start_col, end_col)
 
         print(f"Данные записаны и стилизованы: строки {start_row}-{end_row - 1}")
-
-

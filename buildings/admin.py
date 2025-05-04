@@ -81,8 +81,8 @@ class ToolsSheetAdmin(admin.ModelAdmin):
 
 
 class BuildObjectAdmin(admin.ModelAdmin):
-    fields = ('name', 'total_budget', 'material', 'sh_url')
-    list_display = ('name', 'total_budget', 'display_materials')
+    fields = ('name', 'total_budget', 'material', 'current_budget', 'sh_url')
+    list_display = ('name', 'total_budget', 'current_budget', 'display_materials')
 
     def display_materials(self, obj):
         return ", ".join([material.name for material in obj.material.all()])

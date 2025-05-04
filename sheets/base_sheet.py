@@ -31,7 +31,6 @@ class BaseTable:
         update_data(range_name, values): Обновляет данные в заданном диапазоне листа.
     """
     def __init__(self, obj=None, sheet_name=None):
-    # def __init__(self, build_object, sheet_name):
         self.obj = obj
         self.sh_url = obj.sh_url
         self.sheet_name = sheet_name
