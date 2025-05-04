@@ -46,7 +46,7 @@ class WorkTimeTable(BaseTable):
 
         # Стили
         self.apply_styles(start_row, row_index, 0, len(headers))
-        print(f'Таблица для объекта {self.build_object.name} создана\n')
+        print(f'Таблица для объекта {self.obj.name} создана\n')
 
     def remove_existing_chunk_if_exists(self, chunk):
         sheet_name = self.sheet_name
@@ -126,7 +126,7 @@ class WorkTimeTable(BaseTable):
 
         # Получаем WorkEntry только для текущего build_object и нужных дат
         work_entries = WorkEntry.objects.filter(
-            build_object=self.build_object,
+            build_object=self.obj,
             date__in=dates
         ).select_related("worker")
 
