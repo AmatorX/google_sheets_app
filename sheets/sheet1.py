@@ -6,7 +6,7 @@ from buildings.models import WorkEntry, Material
 
 
 
-class DefaultSheetTable(BaseTable):
+class Sheet1Table(BaseTable):
     def __init__(self, obj):
         self.obj = obj
         self.sh_url = obj.sh_url
@@ -222,3 +222,60 @@ class DefaultSheetTable(BaseTable):
         )
 
         print(f"Сводка по работникам записана, стили применены с {style_start_row} по {style_end_row}")
+
+    def get_total_materials_usage(self):
+        """
+        Возвращает словарь {название_материала: общее_количество}
+        по всем WorkEntry для текущего объекта.
+        """
+        entries = WorkEntry.objects.filter(build_object=self.obj)
+        total_usage = defaultdict(float)
+
+        for entry in entries:
+            try:
+                materials = entry.get_materials_used()
+            except Exception as e:
+                print(f"Ошибка при чтении материалов из WorkEntry(id={entry.id}): {e}")
+                continue
+
+            for name, quantity in materials.items():
+                try:
+                    total_usage[name] += float(quantity)
+                except (TypeError, ValueError) as e:
+                    print(f"Ошибка при обработке количества материала '{name}' в WorkEntry(id={entry.id}): {e}")
+        print(f"Объект {self.obj.name} использовано материалов {dict(total_usage)}")
+        return dict(total_usage)
+
+
+    def write_materials_summary(self, start_row=None):
+        """
+        Записывает в таблицу блок с суммой использованных материалов:
+        Колонка 'Material' и колонка 'Quantity' рядом с ней.
+        Если start_row не указан — записывает после основной KPI-таблицы.
+        """
+        summary = self.get_total_materials_usage()
+        if not summary:
+            print("Нет данных для записи материалов.")
+            return
+
+        # Формируем данные для записи
+        materials = list(summary.items())
+        data = [["Material", "Total usage"]] + [[name, round(qty, 2)] for name, qty in materials]
+
+        # Если не указан старт, ставим под основной таблицей
+        if start_row is None:
+            start_row = self.get_last_non_empty_row() + 3
+
+        cell = f"A{start_row}"
+        self.update_data(cell, data)
+
+        # Применяем стили
+        self.apply_styles(
+            start_row=start_row,
+            end_row=start_row + len(data) - 1,
+            start_col=0,
+            end_col=2,
+        )
+
+        print(f"Сводка по материалам записана начиная с {cell}")
+

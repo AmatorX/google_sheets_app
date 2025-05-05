@@ -3,8 +3,8 @@ import logging
 
 from django.contrib import admin, messages
 
+from sheets.sheet1 import Sheet1Table
 from .models import Worker, BuildObject, Material, Tool, ToolsSheet
-# from ..utils.add_users_to_work_time import append_user_names_to_tables
 from django.contrib.admin import SimpleListFilter
 
 from django.contrib import admin
@@ -30,7 +30,6 @@ class WorkerAdmin(admin.ModelAdmin):
         }),
     )
     list_per_page = 10
-    # inlines = (WorkerProfileInline,)
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
@@ -80,7 +79,20 @@ class ToolsSheetAdmin(admin.ModelAdmin):
 
 
 
+@admin.action(description="Write a summary of the materials consumption in the table")
+def write_materials_summary_action(modeladmin, request, queryset):
+    for obj in queryset:
+        try:
+            table = Sheet1Table(obj)
+            table.write_materials_summary()
+        except Exception as e:
+            modeladmin.message_user(request, f"Ошибка при обработке '{obj.name}': {e}", level="error")
+        else:
+            modeladmin.message_user(request, f"Сводка материалов записана в таблицу для '{obj.name}'")
+
+
 class BuildObjectAdmin(admin.ModelAdmin):
+    actions = [write_materials_summary_action]
     fields = ('name', 'total_budget', 'material', 'current_budget', 'sh_url')
     list_display = ('name', 'total_budget', 'current_budget', 'display_materials')
 

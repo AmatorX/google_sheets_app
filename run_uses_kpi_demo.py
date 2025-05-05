@@ -6,7 +6,8 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tsa.settings")
 django.setup()
 
 from buildings.models import BuildObject
-from sheets.sheet1 import Sheet1Table
+from sheets.users_kpi_sheet import UsersKPITable  # путь адаптируй под своё расположение файла
+
 def main():
     build_objects = BuildObject.objects.all()
 
@@ -17,10 +18,9 @@ def main():
     for obj in build_objects:
         print(f"\n--- Объект: {obj.name} ---")
         try:
-            table = Sheet1Table(obj)
-            # table.write_summary()
-            # table.write_summary_workers()
-            table.write_materials_summary()
+            table = UsersKPITable(obj)
+            table.ensure_sheet_exists()
+            table.write_kpi_table()
         except Exception as e:
             print(f"Ошибка при обработке объекта '{obj.name}': {e}")
 
