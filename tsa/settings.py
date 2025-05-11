@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,8 +38,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'buildings',
+    'tsa_app',
     'sheets',
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -75,10 +77,17 @@ WSGI_APPLICATION = 'tsa.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': '/app/db/db.sqlite3',  # Указываем правильный путь
     }
 }
 
@@ -123,3 +132,35 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+CELERY_ENABLE_UTC = False
+CELERY_TIMEZONE = 'America/Edmonton'
+# CELERY_BROKER_URL = 'redis://localhost:6379/0' # для тестов локально
+CELERY_BROKER_URL = 'redis://redis:6379/0' # Для раблоты в докер контейнере
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+CELERY_BEAT_SCHEDULE = {
+    'daily-update-worktime-tables': {
+        'task': 'sheets.tasks.update_all_worktime_tables',
+        'schedule': crontab(hour=3, minute=47),
+    },
+    'daily-update-photo-tables': {
+        'task': 'sheets.tasks.update_photos_tables',
+        'schedule': crontab(hour=3, minute=48),
+    },
+    'update-results-tables-daily': {
+        'task': 'sheets.tasks.update_results_tables',
+        'schedule': crontab(hour=3, minute=49),
+    },
+    'update-daily-object-kpis': {
+        'task': 'sheets.tasks.update_daily_object_kpis',
+        'schedule': crontab(hour=3, minute=50),
+    },
+    'update-daily-user-kpis': {
+        'task': 'sheets.tasks.update_daily_user_kpis',
+        'schedule': crontab(hour=3, minute=51),
+    },
+}
+

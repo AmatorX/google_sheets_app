@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import date, timedelta
 
-from buildings.models import WorkEntry, Material
+from tsa_app.models import WorkEntry, Material
 from sheets.base_sheet import BaseTable
 
 
@@ -199,6 +199,7 @@ class UsersKPITable(BaseTable):
         """
         today = date.today()
         first_day = today.replace(day=1)
+        self.ensure_sheet_exists()
 
         # Проверка: есть ли вообще отчеты по объекту за месяц
         has_entries = WorkEntry.objects.filter(

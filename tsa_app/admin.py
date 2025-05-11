@@ -35,7 +35,7 @@ class WorkerAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
         if not change:  # Проверяем, что объект был создан, а не обновлен
             pass
-            # append_user_names_to_tables(obj)  # Ваша функция для записи данных
+            # append_user_names_to_tables(obj)  # функция для записи данных
             # Отображаем сообщение в админке
             # messages.success(request, 'Данные записаны успешно!')
 
@@ -90,9 +90,20 @@ def write_materials_summary_action(modeladmin, request, queryset):
         else:
             modeladmin.message_user(request, f"Сводка материалов записана в таблицу для '{obj.name}'")
 
+@admin.action(description="Write summary data on the real average earnings per hour for employees")
+def write_users_kpi_data(modeladmin, request, queryset):
+    for obj in queryset:
+        try:
+            table = Sheet1Table(obj)
+            table.write_summary_workers()
+        except Exception as e:
+            modeladmin.message_user(request, f"Ошибка при обработке '{obj.name}': {e}", level="error")
+        else:
+            modeladmin.message_user(request, f"Сводка результатов работник записана в таблицу для '{obj.name}'")
+
 
 class BuildObjectAdmin(admin.ModelAdmin):
-    actions = [write_materials_summary_action]
+    actions = [write_materials_summary_action, write_users_kpi_data]
     fields = ('name', 'total_budget', 'material', 'current_budget', 'sh_url')
     list_display = ('name', 'total_budget', 'current_budget', 'display_materials')
 

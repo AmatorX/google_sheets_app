@@ -4,7 +4,7 @@ from typing import List
 import logging
 
 from sheets.base_sheet import BaseTable
-from buildings.models import WorkEntry, Material
+from tsa_app.models import WorkEntry, Material
 
 logger = logging.getLogger(__name__)
 
@@ -261,20 +261,22 @@ class ResultsTable(BaseTable):
             all_worker_data (List[List[str]]): Данные для записи в таблицу
         """
         try:
-            # Получаем ID таблицы с помощью метода get_spreadsheet_id
+            # Убедимся, что лист существует
+            self.ensure_sheet_exists()
+
+            # Получаем ID таблицы
             spreadsheet_id = self.get_spreadsheet_id()
 
             # Запись данных в таблицу
-            range_ = f"{self.sheet_name}!A1"  # Начинаем запись с ячейки A1
+            range_ = f"{self.sheet_name}!A1"
             body = {
                 "values": all_worker_data
             }
 
-            # Отправляем запрос на запись данных
             response = self.service.spreadsheets().values().update(
                 spreadsheetId=spreadsheet_id,
                 range=range_,
-                valueInputOption="USER_ENTERED",  # Указываем формат записи
+                valueInputOption="USER_ENTERED",
                 body=body
             ).execute()
 
@@ -287,13 +289,55 @@ class ResultsTable(BaseTable):
                 self.apply_styles(
                     start_row=start_row,
                     end_row=end_row,
-                    start_col=0,  # например, начинать с колонки B (1 = B)
+                    start_col=0,
                     end_col=num_columns
                 )
 
         except Exception as e:
             logger.error(f"Произошла ошибка при записи в Google Sheets: {e}")
             print(f"Произошла ошибка при записи в Google Sheets: {e}")
+
+    # def write_to_google_sheets(self, all_worker_data: List[List[str]]):
+    #     """
+    #     Записывает данные о работниках и их материалах в целевой лист Google Sheets.
+    #
+    #     Args:
+    #         all_worker_data (List[List[str]]): Данные для записи в таблицу
+    #     """
+    #     try:
+    #         # Получаем ID таблицы с помощью метода get_spreadsheet_id
+    #         spreadsheet_id = self.get_spreadsheet_id()
+    #
+    #         # Запись данных в таблицу
+    #         range_ = f"{self.sheet_name}!A1"  # Начинаем запись с ячейки A1
+    #         body = {
+    #             "values": all_worker_data
+    #         }
+    #
+    #         # Отправляем запрос на запись данных
+    #         response = self.service.spreadsheets().values().update(
+    #             spreadsheetId=spreadsheet_id,
+    #             range=range_,
+    #             valueInputOption="USER_ENTERED",  # Указываем формат записи
+    #             body=body
+    #         ).execute()
+    #
+    #         logger.info(f"Данные успешно записаны в Google Sheets: {response}")
+    #         print(f"Данные успешно записаны в Google Sheets: {response}")
+    #
+    #         format_ranges = self.get_format_ranges(all_worker_data)
+    #
+    #         for start_row, end_row, num_columns in format_ranges:
+    #             self.apply_styles(
+    #                 start_row=start_row,
+    #                 end_row=end_row,
+    #                 start_col=0,  # например, начинать с колонки B (1 = B)
+    #                 end_col=num_columns
+    #             )
+    #
+    #     except Exception as e:
+    #         logger.error(f"Произошла ошибка при записи в Google Sheets: {e}")
+    #         print(f"Произошла ошибка при записи в Google Sheets: {e}")
 
     # @staticmethod
     # def get_format_ranges(data):

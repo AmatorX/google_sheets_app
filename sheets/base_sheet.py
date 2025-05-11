@@ -110,7 +110,7 @@ class BaseTable:
 
     def get_workers_for_build_object(self):
         """Возвращает всех пользователей, связанных с объектом строительства"""
-        from buildings.models import Worker  # Импортируем модель внутри метода, чтобы избежать циклических зависимостей
+        from tsa_app.models import Worker  # Импортируем модель внутри метода, чтобы избежать циклических зависимостей
         workers = Worker.objects.filter(build_obj=self.build_object)
         return workers
 

@@ -1,7 +1,7 @@
 
 from typing import List
 from sheets.base_sheet import BaseTable
-from buildings.models import Tool, ToolsSheet
+from tsa_app.models import Tool, ToolsSheet
 
 
 class ToolsTable(BaseTable):

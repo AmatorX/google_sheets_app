@@ -19,7 +19,6 @@ def main():
         print(f"\n--- Объект: {obj.name} ---")
         try:
             table = UsersKPITable(obj)
-            table.ensure_sheet_exists()
             table.write_kpi_table()
         except Exception as e:
             print(f"Ошибка при обработке объекта '{obj.name}': {e}")

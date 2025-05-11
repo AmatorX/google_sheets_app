@@ -16,9 +16,6 @@ if __name__ == "__main__":
             print(f"Обрабатываем объект: {build_object.name}")
             results_table = ResultsTable(obj=build_object)
 
-            # Убедимся, что лист существует
-            results_table.ensure_sheet_exists()
-
             # Получаем и строим таблицу для работников
             all_worker_data = results_table.build_worker_table()
             if all_worker_data:

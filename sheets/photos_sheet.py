@@ -1,7 +1,8 @@
 from datetime import datetime
+from calendar import monthrange
 import logging
 from sheets.base_sheet import BaseTable
-from buildings.models import WorkEntry
+from tsa_app.models import WorkEntry
 
 
 logger = logging.getLogger(__name__)
@@ -56,21 +57,51 @@ class PhotosTable(BaseTable):
             logger.error(f"Ошибка при получении имён пользователей из листа '{self.sheet_name}': {e}")
             return []
 
-    def create_tables_for_missing_workers(self):
+    # def write_missing_worker_tables(self):
+    #
+    #     """
+    #     Создаёт таблицы для новых пользователей, если они не присутствуют на листе.
+    #     Каждая таблица включает дни месяца и имя работника, а также отступ между таблицами.
+    #     """
+    #
+    #     linked_workers = self.get_workers()
+    #     existing_workers = self.get_usernames_from_sheet()
+    #     missing_workers = [w for w in linked_workers if w not in existing_workers]
+    #
+    #     worker_tables = []  # Список таблиц по каждому работнику
+    #     style_ranges = []
+    #
+    #     # current_row = 1  # Индекс с 1
+    #     current_row = self.get_last_non_empty_row(column_letter='A') + 1
+    #
+    #     for worker in missing_workers:
+    #         table_data, style_range = self.create_worker_data(worker, current_row)
+    #         worker_tables.append(table_data)
+    #         style_ranges.append(style_range)
+    #         current_row += len(table_data)
+    #
+    #     if worker_tables:
+    #         self.batch_update_columns(worker_tables)
+    #
+    #     for start_row, end_row, start_col, end_col in style_ranges:
+    #         self.apply_styles(start_row, end_row, start_col, end_col)
 
+    def write_missing_worker_tables(self):
         """
-        Создаёт таблицы для новых пользователей, если они не присутствуют на листе.
-        Каждая таблица включает дни месяца и имя работника, а также отступ между таблицами.
+        Записывает таблицы для новых работников, которых ещё нет на листе.
+        Каждая таблица содержит дни месяца и имя работника. Перед этим
+        гарантируется, что лист существует.
         """
+
+        self.ensure_sheet_exists()
 
         linked_workers = self.get_workers()
         existing_workers = self.get_usernames_from_sheet()
         missing_workers = [w for w in linked_workers if w not in existing_workers]
 
-        worker_tables = []  # Список таблиц по каждому работнику
+        worker_tables = []
         style_ranges = []
 
-        # current_row = 1  # Индекс с 1
         current_row = self.get_last_non_empty_row(column_letter='A') + 1
 
         for worker in missing_workers:
@@ -98,7 +129,6 @@ class PhotosTable(BaseTable):
             tuple: (table_data (list[list[str]]), style_range (tuple[int, int, int, int]))
         """
 
-        from calendar import monthrange
         now = datetime.now()
         days_in_month = monthrange(now.year, now.month)[1]
 

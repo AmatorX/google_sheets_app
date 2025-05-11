@@ -2,7 +2,7 @@
 from collections import defaultdict
 from datetime import date
 from sheets.base_sheet import BaseTable
-from buildings.models import WorkEntry, Material
+from tsa_app.models import WorkEntry, Material
 
 
 

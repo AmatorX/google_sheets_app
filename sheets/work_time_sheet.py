@@ -1,9 +1,8 @@
 import logging
 import calendar
 
-from buildings.models import WorkEntry
+from tsa_app.models import WorkEntry
 from collections import defaultdict
-
 from utils.chunk import create_chunk_data
 from sheets.base_sheet import BaseTable
 
@@ -163,3 +162,18 @@ class WorkTimeTable(BaseTable):
               f'chunk: {chunk}\n'
               f'rows: {rows}')
         return chunk, rows
+
+    def update_current_chunk(self):
+
+        chunk_data = create_chunk_data(full_list=False)
+
+        print(f'Обновление WorkTime для объекта {self.obj.name}, чанк: {chunk_data}')
+        self.ensure_sheet_exists()
+        self.remove_existing_chunk_if_exists(chunk_data)
+
+        chunk, rows_generated = self.generate_current_chunk_data_and_rows()
+        if rows_generated:
+            self.create_table(chunk_data, rows_generated)
+            print(f'Таблица обновлена для объекта {self.obj.name}\n')
+        else:
+            print(f'Нет данных для записи в таблицу WorkTime для объекта {self.obj.name}\n')

@@ -3,7 +3,7 @@ from decimal import Decimal
 
 
 from sheets.base_sheet import BaseTable
-from buildings.models import WorkEntry, Material, BuildBudgetHistory
+from tsa_app.models import WorkEntry, Material, BuildBudgetHistory
 
 
 class ObjectKPITable(BaseTable):
@@ -67,18 +67,6 @@ class ObjectKPITable(BaseTable):
     #     self.obj.current_budget = new_budget
     #     self.obj.save()
 
-    def update_budget(self, done_today_dollars):
-        today = date.today()
-        last_entry = self.obj.budget_history.order_by('-date').first()
-        previous_budget = last_entry.current_budget if last_entry else self.obj.total_budget
-
-        new_budget = previous_budget - done_today_dollars
-
-        BuildBudgetHistory.objects.update_or_create(
-            build_object=self.obj,
-            date=today,
-            defaults={'current_budget': new_budget}
-        )
 
     def ensure_headers(self):
         """
@@ -101,6 +89,14 @@ class ObjectKPITable(BaseTable):
         if not month_in_column:
             self.write_headers([self.header, self.header2])
 
+    def update_budget_history(self, new_budget):
+        today = date.today()
+
+        BuildBudgetHistory.objects.update_or_create(
+            build_object=self.obj,
+            date=today,
+            defaults={'current_budget': new_budget}
+        )
 
     def write_today_row(self):
         """
@@ -112,20 +108,22 @@ class ObjectKPITable(BaseTable):
         done_today = self.get_done_today_dollars()
         budget_before = self.obj.current_budget
 
-        budget_after = self.obj.current_budget
+        new_budget = budget_before - done_today
         done_percent = (done_today / budget_before * 100) if budget_before else 0
-        left_percent = (budget_after / budget_before * 100) if budget_before else 0
+        left_percent = (new_budget / budget_before * 100) if budget_before else 0
 
         row = [
             day_of_month,
             round(done_today, 2),
             round(done_percent, 2),
             round(left_percent, 2),
-            round(budget_after, 2)
+            round(new_budget, 2)
         ]
         self.write_rows([row])
         # Обновляем бюджет и сохраняем
-        self.update_budget(done_today)
+        self.obj.current_budget = new_budget
+        self.obj.save()
+        self.update_budget_history(new_budget)
 
     def write_headers(self, headers: list[list]):
         """
@@ -162,3 +160,15 @@ class ObjectKPITable(BaseTable):
         self.apply_styles(start_row, end_row, start_col, end_col)
 
         print(f"Данные записаны и стилизованы: строки {start_row}-{end_row - 1}")
+
+    def write_today_data(self):
+        """
+        Создаёт лист (если отсутствует), заголовки (если не заданы) и записывает строку с сегодняшними KPI.
+        """
+        try:
+            self.ensure_sheet_exists()
+            self.ensure_headers()
+            self.write_today_row()
+            print(f"KPI успешно записаны для объекта '{self.obj.name}'")
+        except Exception as e:
+            print(f"Ошибка при записи KPI для объекта '{self.obj.name}': {e}")

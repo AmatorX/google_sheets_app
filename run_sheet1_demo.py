@@ -18,8 +18,6 @@ def main():
         print(f"\n--- Объект: {obj.name} ---")
         try:
             table = Sheet1Table(obj)
-            # table.write_summary()
-            # table.write_summary_workers()
             table.write_materials_summary()
         except Exception as e:
             print(f"Ошибка при обработке объекта '{obj.name}': {e}")

@@ -16,11 +16,8 @@ if __name__ == "__main__":
             print(f"Обрабатываем объект: {build_object.name}")
             photos_table = PhotosTable(obj=build_object)
 
-            # Убедимся, что лист существует
-            photos_table.ensure_sheet_exists()
-
-            # Создаём таблицы для воркеров, если их ещё нет
-            photos_table.create_tables_for_missing_workers()
+            # Создаём таблицы для воркеров, если их ещё нет, записываем в гугл шитс
+            photos_table.write_missing_worker_tables()
 
         except Exception as e:
             print(f"Ошибка при обработке объекта {build_object.name}: {e}\n")

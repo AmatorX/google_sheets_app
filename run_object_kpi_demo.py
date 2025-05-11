@@ -19,9 +19,8 @@ def main():
         print(f"\n--- Объект: {obj.name} ---")
         try:
             table = ObjectKPITable(obj)
-            table.ensure_sheet_exists()
-            table.ensure_headers()  
-            table.write_today_row()         # Записываем расчёты
+            # Записываем расчёты
+            table.write_today_data()
             print("Данные успешно записаны.")
         except Exception as e:
             print(f"Ошибка при обработке объекта '{obj.name}': {e}")
