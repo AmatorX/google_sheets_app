@@ -6,6 +6,9 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 
 
+def get_today_date():
+    return timezone.now().date()
+
 class Worker(models.Model):
     CHOICES = [
         ('YES', 'Yes'),
@@ -131,7 +134,7 @@ class WorkEntry(models.Model):
     build_object = models.ForeignKey('BuildObject', on_delete=models.CASCADE, related_name='work_entries')
     worked_hours = models.DecimalField(max_digits=5, decimal_places=2)  # Для хранения отработанных часов
     materials_used = models.TextField()  # Сохраняем данные в формате JSON как текст
-    date = models.DateField(auto_now_add=True)  # Дата, когда запись была создана
+    date = models.DateField(default=get_today_date())  # Дата, когда запись была создана
 
     def set_materials_used(self, materials_dict):
         """Сохраняет словарь материалов в поле materials_used."""

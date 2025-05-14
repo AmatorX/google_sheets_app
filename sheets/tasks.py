@@ -1,4 +1,6 @@
 from datetime import datetime
+from time import sleep
+
 import pytz
 import logging
 from celery import shared_task
@@ -26,6 +28,7 @@ def update_all_worktime_tables():
             table.update_current_chunk()
         except Exception as e:
             logger.error(f"Ошибка при обновлении объекта {build_object.name}: {e}")
+        sleep(10)
 
     logger.info("Задача Celery завершена")
 
@@ -42,6 +45,7 @@ def update_photos_tables():
             photos_table.write_missing_worker_tables()
         except Exception as e:
             logger.error(f"Ошибка при обработке объекта {build_object.name}: {e}")
+        sleep(10)
 
     logger.info("Celery: задача обновления фото-таблиц завершена")
 
@@ -67,6 +71,7 @@ def update_results_tables():
 
         except Exception as e:
             logger.error(f"Ошибка при обработке объекта {build_object.name}: {e}\n")
+        sleep(10)
     logger.info("Celery: задача обновления таблиц результатов завершена")
 
 
@@ -86,6 +91,7 @@ def update_daily_object_kpis():
             print("Данные успешно записаны.")
         except Exception as e:
             print(f"Ошибка при обработке объекта '{obj.name}': {e}")
+        sleep(10)
 
 
 @shared_task
@@ -104,3 +110,4 @@ def update_daily_user_kpis():
             logger.info(f"KPI-таблица для пользователей объекта '{obj.name}' успешно записана.")
         except Exception as e:
             logger.error(f"Ошибка при обработке объекта '{obj.name}': {e}")
+        sleep(10)

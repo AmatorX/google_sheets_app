@@ -1,4 +1,4 @@
-
+from calendar import monthrange
 from collections import defaultdict
 from datetime import date
 from sheets.base_sheet import BaseTable
@@ -57,18 +57,52 @@ class Sheet1Table(BaseTable):
         total_salary = sum(self.get_worker_month_salary(worker) for worker in workers)
         return round(total_salary, 2)
 
-    def get_worker_month_earned(self, worker):
+    # def get_worker_month_earned(self, worker):
+    #     """
+    #     Возвращает заработок работника за установленный материал за текущий месяц.
+    #     """
+    #     today = date.today()
+    #     first_day = today.replace(day=1)
+    #
+    #     entries = WorkEntry.objects.filter(
+    #         build_object=self.obj,
+    #         worker=worker,
+    #         date__gte=first_day,
+    #         date__lte=today
+    #     )
+    #
+    #     earned = 0.0
+    #     for entry in entries:
+    #         materials = entry.get_materials_used()
+    #         for material_name, quantity in materials.items():
+    #             try:
+    #                 material = Material.objects.get(name=material_name)
+    #                 price = material.price or 0
+    #                 earned += float(quantity) * price
+    #             except Material.DoesNotExist:
+    #                 print(f"Материал '{material_name}' не найден. Пропускаем.")
+    #                 continue
+    #     return round(earned, 2)
+#################################################################################################################
+    def get_worker_month_earned(self, worker, month=None, year=None):
         """
-        Возвращает заработок работника за установленный материал за текущий месяц.
+        Возвращает заработок работника за установленный материал за указанный месяц.
+        Если month и year не заданы, используется текущий месяц.
         """
         today = date.today()
-        first_day = today.replace(day=1)
+        if month is None:
+            month = today.month
+        if year is None:
+            year = today.year
+
+        first_day = date(year, month, 1)
+        last_day = date(year, month, monthrange(year, month)[1])
 
         entries = WorkEntry.objects.filter(
             build_object=self.obj,
             worker=worker,
             date__gte=first_day,
-            date__lte=today
+            date__lte=last_day
         )
 
         earned = 0.0
@@ -82,6 +116,7 @@ class Sheet1Table(BaseTable):
                 except Material.DoesNotExist:
                     print(f"Материал '{material_name}' не найден. Пропускаем.")
                     continue
+        print(f"Worker -> {worker.name} ||| get_worker_month_earned -> {round(earned, 2)}")
         return round(earned, 2)
 
     def get_month_earned(self):
@@ -110,7 +145,8 @@ class Sheet1Table(BaseTable):
         earned = self.get_month_earned()
 
         result = earned - salary
-        progress = (earned / start_budget * 100) if start_budget else 0
+        progress = round(((earned / start_budget * 100) if start_budget else 0), 2)
+        progress = str(progress)+ '%'
 
         return [
             [month_year],
@@ -118,7 +154,7 @@ class Sheet1Table(BaseTable):
             ['Salary', salary],
             ['Earned', earned],
             ['Result', result],
-            ['Progress', round(progress, 2)]
+            ['Progress', progress]
         ]
 
     def write_summary(self):
@@ -127,7 +163,7 @@ class Sheet1Table(BaseTable):
         Затем применяет стили к вставленному блоку.
         """
         # Получаем текущую последнюю строку в колонке B
-        start_row = self.get_last_non_empty_row(column_letter='A') + 1
+        start_row = self.get_last_non_empty_row(column_letter='B') + 1
 
         # Две пустые строки
         empty_rows = [[''], ['']]
@@ -167,6 +203,13 @@ class Sheet1Table(BaseTable):
         today = date.today()
         first_day = today.replace(day=1)
 
+        ############################################################################# для апреля и марта хардкод
+        # year = 2025
+        # month = 4  # или 4 для апреля
+        #
+        # first_day = date(year, month, 1)
+        # today = date(year, month, monthrange(year, month)[1])
+
         # Все записи за текущий месяц по объекту
         entries = WorkEntry.objects.filter(
             build_object=self.obj,
@@ -177,6 +220,7 @@ class Sheet1Table(BaseTable):
         worker_hours = defaultdict(float)
         for entry in entries:
             worker_hours[entry.worker] += float(entry.worked_hours)
+            print(f"{entry.worker.name} worker_hours -> {worker_hours}")
 
         rows = []
         for worker, hours in worker_hours.items():
@@ -184,6 +228,7 @@ class Sheet1Table(BaseTable):
                 continue
             earned = self.get_worker_month_earned(worker)
             value = round(earned / hours, 2)
+            print(f"Работник {worker.name} заработано {earned} часов {hours} реальная зп {value}")
             rows.append([worker.name, value])
 
         # Добавляем две пустые строки и строку с месяцем
@@ -199,7 +244,7 @@ class Sheet1Table(BaseTable):
         Затем применяет стили к блоку с работниками (кроме пустых строк).
         """
         # Получаем текущую последнюю строку в колонке B
-        start_row = self.get_last_non_empty_row(column_letter='A') + 1
+        start_row = self.get_last_non_empty_row(column_letter='B') + 1
 
         # Все строки, включая две пустых, месяц и список работников
         worker_rows = self.get_workers_summary_rows()

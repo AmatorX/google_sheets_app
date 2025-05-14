@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import os
 from pathlib import Path
 from celery.schedules import crontab
 
@@ -26,7 +26,9 @@ SECRET_KEY = 'django-insecure-5t#_^sbft=0bv@$%0ka3kz7k_w1d5j@q0k0)@+(3m#+48bbt^#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# ALLOWED_HOSTS = [] # Локально
+ALLOWED_HOSTS = ['109.248.160.110', 'localhost', '127.0.0.1']
+
 
 
 # Application definition
@@ -40,7 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'tsa_app',
     'sheets',
-    'django_celery_beat',
+    # 'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -77,19 +79,20 @@ WSGI_APPLICATION = 'tsa.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': '/app/db/db.sqlite3',  # Указываем правильный путь
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# # Для деплоя в докере
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': '/app/db/db.sqlite3',  # Указываем правильный путь
+#     }
+# }
 
 
 # Password validation
@@ -126,7 +129,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
+# STATIC_URL = 'static/'
+
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -136,31 +142,31 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CELERY_ENABLE_UTC = False
 CELERY_TIMEZONE = 'America/Edmonton'
-# CELERY_BROKER_URL = 'redis://localhost:6379/0' # для тестов локально
-CELERY_BROKER_URL = 'redis://redis:6379/0' # Для раблоты в докер контейнере
+CELERY_BROKER_URL = 'redis://localhost:6379/0' # для тестов локально
+# CELERY_BROKER_URL = 'redis://redis:6379/0' # Для раблоты в докер контейнере
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
 CELERY_BEAT_SCHEDULE = {
     'daily-update-worktime-tables': {
         'task': 'sheets.tasks.update_all_worktime_tables',
-        'schedule': crontab(hour=3, minute=47),
+        'schedule': crontab(hour=12, minute=37),
     },
     'daily-update-photo-tables': {
         'task': 'sheets.tasks.update_photos_tables',
-        'schedule': crontab(hour=3, minute=48),
+        'schedule': crontab(hour=12, minute=38),
     },
     'update-results-tables-daily': {
         'task': 'sheets.tasks.update_results_tables',
-        'schedule': crontab(hour=3, minute=49),
+        'schedule': crontab(hour=12, minute=39),
     },
     'update-daily-object-kpis': {
         'task': 'sheets.tasks.update_daily_object_kpis',
-        'schedule': crontab(hour=3, minute=50),
+        'schedule': crontab(hour=13, minute=53),
     },
     'update-daily-user-kpis': {
         'task': 'sheets.tasks.update_daily_user_kpis',
-        'schedule': crontab(hour=3, minute=51),
+        'schedule': crontab(hour=12, minute=41),
     },
 }
 

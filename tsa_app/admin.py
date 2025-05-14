@@ -1,10 +1,13 @@
 
 import logging
+from time import sleep
 
 from django.contrib import admin, messages
+# from django_celery_beat.models import PeriodicTask, IntervalSchedule, CrontabSchedule, SolarSchedule, ClockedSchedule
 
 from sheets.sheet1 import Sheet1Table
-from .models import Worker, BuildObject, Material, Tool, ToolsSheet
+from sheets.work_time_sheet import WorkTimeTable
+from .models import Worker, BuildObject, Material, Tool, ToolsSheet, WorkEntry
 from django.contrib.admin import SimpleListFilter
 
 from django.contrib import admin
@@ -13,6 +16,22 @@ from .models import BuildObject
 
 logger = logging.getLogger(__name__)
 
+
+class WorkEntryAdmin(admin.ModelAdmin):
+    list_display = ('id', 'worker', 'build_object', 'worked_hours', 'date', 'short_materials')
+    list_filter = ('worker', 'build_object', 'date')
+    search_fields = ('worker__name', 'build_object__name')
+    date_hierarchy = 'date'
+    ordering = ('-date',)
+
+    def short_materials(self, obj):
+        """Краткое представление использованных материалов."""
+        try:
+            materials = obj.get_materials_used()
+            return ', '.join([f"{k}: {v}" for k, v in list(materials.items())[:3]]) + ('...' if len(materials) > 3 else '')
+        except Exception:
+            return 'Ошибка разбора'
+    short_materials.short_description = 'Materials'
 
 class WorkerAdmin(admin.ModelAdmin):
     list_display = ('name', 'tg_id', 'build_obj', 'salary', 'title', 'foreman')
@@ -102,8 +121,44 @@ def write_users_kpi_data(modeladmin, request, queryset):
             modeladmin.message_user(request, f"Сводка результатов работник записана в таблицу для '{obj.name}'")
 
 
+@admin.action(description="Write Work Time tables")
+def update_all_worktime_tables(modeladmin, request, queryset):
+    logger.info("Запущено обновление WorkTime таблиц")
+
+    # build_objects = BuildObject.objects.all()
+
+    for obj in queryset:
+        try:
+            logger.info(f"Обновляем WorkTime таблицу для объекта: {obj.name}")
+            table = WorkTimeTable(obj=obj)
+            table.update_current_chunk()
+        except Exception as e:
+            logger.error(f"Ошибка при обновлении объекта {obj.name}: {e}")
+        sleep(10)
+    messages.success(request, f"Обновление WorkTime завершено для {queryset.count()} объекта(ов)")
+
+    logger.info("Обновление work time таблиц завершено")
+
+
+@admin.action(description="Record monthly summary data")
+def record_summary_data(modeladmin, request, queryset):
+    logger.info("Запущена запись сводных данных за месяц")
+    for obj in queryset:
+        try:
+            logger.info(f"Запись сводной таблицы за месяц для объекта: {obj.name}")
+            table = Sheet1Table(obj=obj)
+            table.write_summary()
+        except Exception as e:
+            logger.error(f"Ошибка при обновлении объекта {obj.name}: {e}")
+        sleep(10)
+
+    logger.info("Обновление сводных таблиц завершено")
+
+
+
+
 class BuildObjectAdmin(admin.ModelAdmin):
-    actions = [write_materials_summary_action, write_users_kpi_data]
+    actions = [write_materials_summary_action, write_users_kpi_data, record_summary_data]
     fields = ('name', 'total_budget', 'material', 'current_budget', 'sh_url')
     list_display = ('name', 'total_budget', 'current_budget', 'display_materials')
 
@@ -118,3 +173,5 @@ admin.site.register(BuildObject, BuildObjectAdmin)
 admin.site.register(Material, MaterialAdmin)
 admin.site.register(ToolsSheet, ToolsSheetAdmin)
 admin.site.register(Tool, ToolAdmin)
+admin.site.register(WorkEntry, WorkEntryAdmin)
+
