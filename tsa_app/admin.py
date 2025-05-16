@@ -3,6 +3,8 @@ import logging
 from time import sleep
 
 from django.contrib import admin, messages
+
+from sheets.photos_sheet import PhotosTable
 # from django_celery_beat.models import PeriodicTask, IntervalSchedule, CrontabSchedule, SolarSchedule, ClockedSchedule
 
 from sheets.sheet1 import Sheet1Table
@@ -48,7 +50,7 @@ class WorkerAdmin(admin.ModelAdmin):
             'fields': ('employment_agreement', 'over_time', 'start_to_work', 'title', 'payroll_eligible', 'payroll', 'resign_agreement', 'benefits_eligible', 'birthday', 'issued', 'expiry', 'address', 'tickets_available'),
         }),
     )
-    list_per_page = 10
+    list_per_page = 20
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
@@ -155,16 +157,31 @@ def record_summary_data(modeladmin, request, queryset):
     logger.info("Обновление сводных таблиц завершено")
 
 
+@admin.action(description="Update tables for photo reports")
+def update_photos_tables(modeladmin, request, queryset):
+    logger.info("Запуск обновления таблиц фотоотчётов")
+
+    for obj in queryset:
+        try:
+            logger.info(f"Обрабатываем объект: {obj.name}")
+            photos_table = PhotosTable(obj=obj)
+            photos_table.write_missing_worker_tables()
+        except Exception as e:
+            logger.error(f"Ошибка при обработке объекта {obj.name}: {e}")
+        sleep(10)
+
+    logger.info("Обновление фото-таблиц завершено")
 
 
 class BuildObjectAdmin(admin.ModelAdmin):
-    actions = [write_materials_summary_action, write_users_kpi_data, record_summary_data]
-    fields = ('name', 'total_budget', 'material', 'current_budget', 'sh_url')
-    list_display = ('name', 'total_budget', 'current_budget', 'display_materials')
+    actions = [write_materials_summary_action, write_users_kpi_data, record_summary_data, update_photos_tables]
+    fields = ('name', 'total_budget', 'material', 'current_budget', 'sh_url', 'archive')
+    list_display = ('name', 'archive', 'total_budget', 'current_budget', 'display_materials')
+    list_filter = ['archive']
+    list_editable = ('archive',)
 
     def display_materials(self, obj):
         return ", ".join([material.name for material in obj.material.all()])
-
     display_materials.short_description = 'Materials'
 
 

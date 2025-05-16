@@ -71,6 +71,7 @@ class BuildObject(models.Model):
     current_budget = models.FloatField(default=0)
     material = models.ManyToManyField('Material', related_name='build_objects')
     sh_url = models.URLField(null=True, blank=True)
+    archive = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         if self._state.adding and self.current_budget == 0:
