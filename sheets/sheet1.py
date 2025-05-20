@@ -54,41 +54,17 @@ class Sheet1Table(BaseTable):
         Возвращает общую зарплату за текущий месяц по объекту.
         """
         workers = self.obj.workers.all()
+        print(f"get_all_workers_month_salary работники {workers}")
         total_salary = sum(self.get_worker_month_salary(worker) for worker in workers)
+        print(f"get_all_workers_month_salary объект {self.obj.name} общая зп {round(total_salary, 2)}")
         return round(total_salary, 2)
 
-    # def get_worker_month_earned(self, worker):
-    #     """
-    #     Возвращает заработок работника за установленный материал за текущий месяц.
-    #     """
-    #     today = date.today()
-    #     first_day = today.replace(day=1)
-    #
-    #     entries = WorkEntry.objects.filter(
-    #         build_object=self.obj,
-    #         worker=worker,
-    #         date__gte=first_day,
-    #         date__lte=today
-    #     )
-    #
-    #     earned = 0.0
-    #     for entry in entries:
-    #         materials = entry.get_materials_used()
-    #         for material_name, quantity in materials.items():
-    #             try:
-    #                 material = Material.objects.get(name=material_name)
-    #                 price = material.price or 0
-    #                 earned += float(quantity) * price
-    #             except Material.DoesNotExist:
-    #                 print(f"Материал '{material_name}' не найден. Пропускаем.")
-    #                 continue
-    #     return round(earned, 2)
-#################################################################################################################
     def get_worker_month_earned(self, worker, month=None, year=None):
         """
         Возвращает заработок работника за установленный материал за указанный месяц.
         Если month и year не заданы, используется текущий месяц.
         """
+        print(f"Функция get_worker_month_earned для работника {worker} запущена")
         today = date.today()
         if month is None:
             month = today.month
@@ -125,6 +101,7 @@ class Sheet1Table(BaseTable):
         """
         workers = self.obj.workers.all()
         total_earned = sum(self.get_worker_month_earned(worker) for worker in workers)
+        print(f"get_month_earned объект {self.obj.name} заработок работников {round(total_earned, 2)}")
         return round(total_earned, 2)
 
     def get_summary_rows(self):
@@ -141,8 +118,10 @@ class Sheet1Table(BaseTable):
         month_year = today.strftime("%B %Y")
 
         start_budget = self.get_start_budget()
-        salary = self.get_all_workers_month_salary()
-        earned = self.get_month_earned()
+        # salary = self.get_all_workers_month_salary()
+        # earned = self.get_month_earned()
+        salary = self.get_total_salary()
+        earned = self.get_total_materials_income()
 
         result = earned - salary
         progress = round(((earned / start_budget * 100) if start_budget else 0), 2)
@@ -323,4 +302,104 @@ class Sheet1Table(BaseTable):
         )
 
         print(f"Сводка по материалам записана начиная с {cell}")
+
+    # def get_total_salary(self):
+    #     """
+    #     Возвращает общую сумму зарплаты для всех работников, оставивших отчеты по объекту
+    #     за текущий месяц (с 1-го числа по сегодняшний день).
+    #     Расчёт: почасовая оплата * количество отработанных часов.
+    #     """
+    #
+    #     today = date.today()
+    #     first_day_of_month = today.replace(day=1)
+    #
+    #     entries = WorkEntry.objects.filter(
+    #         build_object=self.obj,
+    #         date__range=(first_day_of_month, today)
+    #     ).select_related('worker')
+    #
+    #     total = 0.0
+    #     for entry in entries:
+    #         salary_per_hour = entry.worker.salary or 0
+    #         worked_hours = entry.get_worked_hours_as_float()
+    #         total += salary_per_hour * worked_hours
+    #
+    #     return round(total, 2)
+
+
+    def get_total_salary(self):
+        """
+        Вычисляет суммарную заработную плату всех работников,
+        оставивших отчёты по данному объекту за текущий месяц.
+
+        Расчёт производится по формуле:
+            зарплата = сумма (почасовая ставка работника * количество отработанных часов)
+
+        Только те WorkEntry, у которых дата входит в текущий месяц (с 1-го числа до сегодня), учитываются.
+
+        :return: Общая сумма заработной платы за текущий месяц (округлена до 2 знаков после запятой).
+        :rtype: float
+        """
+        today = date.today()
+        first_day_of_month = today.replace(day=1)
+
+        entries = WorkEntry.objects.filter(
+            build_object=self.obj,
+            date__range=(first_day_of_month, today)
+        ).select_related('worker')
+
+        total = 0.0
+        for entry in entries:
+            salary_per_hour = entry.worker.salary or 0
+            worked_hours = entry.get_worked_hours_as_float()
+            total += salary_per_hour * worked_hours
+
+        return round(total, 2)
+
+    def get_total_materials_income(self):
+        """
+        Вычисляет общий доход от установки материалов по объекту за текущий месяц.
+
+        Проходится по всем WorkEntry текущего месяца, связанным с объектом,
+        извлекает материалы из поля `materials_used` (в виде словаря: {название: количество}),
+        находит цену каждого материала (если указана) и считает:
+            доход = сумма (цена материала * количество)
+
+        Материалы ищутся среди объектов Material, связанных с текущим BuildObject.
+        Если материал с таким названием не найден или не указана цена — берётся 0.
+
+        :return: Общая сумма дохода за установку материалов за текущий месяц (округлена до 2 знаков после запятой).
+        :rtype: float
+        """
+        today = date.today()
+        first_day_of_month = today.replace(day=1)
+
+        entries = WorkEntry.objects.filter(
+            build_object=self.obj,
+            date__range=(first_day_of_month, today)
+        )
+
+        total = 0.0
+        material_cache = {}  # Кэш цен материалов по названию
+        print(f"Объект: {self.obj.name}")
+        print(f"Всего записей: {entries.count()}")
+        for entry in entries:
+            print(f"Дата: {entry.date}")
+            print(f"Материалы: {entry.get_materials_used()}")
+            materials_dict = entry.get_materials_used()
+            for mat_name, quantity in materials_dict.items():
+                try:
+                    quantity = float(quantity)
+                except (ValueError, TypeError):
+                    quantity = 0  # если не удается привести — считаем как 0
+
+                if mat_name not in material_cache:
+                    material_obj = Material.objects.filter(
+                        name__iexact=mat_name
+                    ).first()
+                    material_cache[mat_name] = material_obj.price if material_obj and material_obj.price else 0
+
+                total += material_cache[mat_name] * quantity
+        print(f"Функция get_total_materials_income вернула {round(total, 2)}")
+        return round(total, 2)
 
