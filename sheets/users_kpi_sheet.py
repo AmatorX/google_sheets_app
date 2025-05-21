@@ -21,10 +21,10 @@ class UsersKPITable(BaseTable):
     def get_kpi_rows(self):
         """
         Возвращает список строк:
-        [дата, имя1, имя2, ...] — заголовок
-        [дата1, earned1, earned2, ...] — данные по дням
+        [дата, имя1, имя2, ..., per_day] — заголовок
+        [дата1, earned1, earned2, ..., per_day_sum] — данные по дням
         ...
-        ['Total', sum1, sum2, ...] — итоги по каждому пользователю
+        ['Total', sum1, sum2, ..., total_sum] — итоги по каждому пользователю и всего
         """
         today = date.today()
         first_day = today.replace(day=1)
@@ -45,25 +45,30 @@ class UsersKPITable(BaseTable):
 
         # Добавляем две пустые строки перед заголовком
         rows = [[""], [""]]
-        header = ["Date"] + [worker.name for worker in workers]
+        header = ["Date"] + [worker.name for worker in workers] + ["Per day"]
         rows.append(header)
 
         totals = [0 for _ in workers]
+        grand_total = 0
 
         current = first_day
         while current <= today:
             row = [current.strftime("%Y-%m-%d")]
+            day_total = 0
             for i, worker in enumerate(workers):
                 earned = day_data.get(current, {}).get(worker, "")
                 if earned != "":
                     totals[i] += earned
+                    day_total += earned
                     row.append(round(earned, 2))
                 else:
                     row.append("")
+            row.append(round(day_total, 2) if day_total else "")
+            grand_total += day_total
             rows.append(row)
             current += timedelta(days=1)
 
-        total_row = ["Total"] + [round(t, 2) for t in totals]
+        total_row = ["Total"] + [round(t, 2) for t in totals] + [round(grand_total, 2)]
         rows.append(total_row)
 
         return rows
@@ -93,10 +98,12 @@ class UsersKPITable(BaseTable):
     #         earned = self.get_worker_day_earned(entry.worker, entry.date)
     #         day_data[entry.date][entry.worker] = earned
     #
+    #     # Добавляем две пустые строки перед заголовком
+    #     rows = [[""], [""]]
     #     header = ["Date"] + [worker.name for worker in workers]
-    #     rows = [header]
+    #     rows.append(header)
     #
-    #     totals = [0 for _ in workers]  # Индекс соответствует порядку работников
+    #     totals = [0 for _ in workers]
     #
     #     current = first_day
     #     while current <= today:
@@ -111,10 +118,11 @@ class UsersKPITable(BaseTable):
     #         rows.append(row)
     #         current += timedelta(days=1)
     #
-    #     # Добавляем строку Total
     #     total_row = ["Total"] + [round(t, 2) for t in totals]
     #     rows.append(total_row)
+    #
     #     return rows
+
 
     def get_total_earned(self, worker, target_date):
         """
