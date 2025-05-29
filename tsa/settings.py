@@ -151,22 +151,26 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_BEAT_SCHEDULE = {
     'daily-update-worktime-tables': {
         'task': 'sheets.tasks.update_all_worktime_tables',
-        'schedule': crontab(hour=12, minute=37),
+        'schedule': crontab(hour=21, minute=0),
     },
     'daily-update-photo-tables': {
         'task': 'sheets.tasks.update_photos_tables',
-        'schedule': crontab(hour=12, minute=38),
+        'schedule': crontab(hour=17, minute=0),
     },
     'update-results-tables-daily': {
         'task': 'sheets.tasks.update_results_tables',
-        'schedule': crontab(hour=12, minute=39),
+        'schedule': crontab(hour=21, minute=10),
     },
     'update-daily-object-kpis': {
         'task': 'sheets.tasks.update_daily_object_kpis',
-        'schedule': crontab(hour=13, minute=53),
+        'schedule': crontab(hour=21, minute=20),
     },
     'update-daily-user-kpis': {
         'task': 'sheets.tasks.update_daily_user_kpis',
+        'schedule': crontab(hour=21, minute=30),
+    },
+    'daily-kpi-data-for-tgbot': {
+        'task': 'sheets.tasks.process_daily_kpi_data_for_tgbot',
         'schedule': crontab(hour=12, minute=41),
     },
 }

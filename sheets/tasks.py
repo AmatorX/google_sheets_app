@@ -1,4 +1,6 @@
-from datetime import datetime
+import json
+import os
+from datetime import datetime, date
 from time import sleep
 
 import pytz
@@ -111,3 +113,30 @@ def update_daily_user_kpis():
         except Exception as e:
             logger.error(f"Ошибка при обработке объекта '{obj.name}': {e}")
         sleep(10)
+
+@shared_task
+def process_daily_kpi_data_for_tgbot():
+    today_str = date.today().strftime("%Y-%m-%d")
+    output_dir = "/app/db"
+    os.makedirs(output_dir, exist_ok=True)
+
+    filepath = os.path.join(output_dir, f"{today_str}.txt")
+
+    build_objects = BuildObject.objects.all()
+    if not build_objects.exists():
+        return "Нет доступных объектов."
+
+    result_data = {}
+
+    for obj in build_objects:
+        try:
+            table = UsersKPITable(obj)
+            data = table.get_today_per_day_dict()
+            result_data.update(data)
+        except Exception as e:
+            result_data[f"error_{obj.id}"] = str(e)
+
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(result_data, f, ensure_ascii=False, indent=2)
+
+    return f"Готово. Данные сохранены в {filepath}"

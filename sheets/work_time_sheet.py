@@ -142,7 +142,7 @@ class WorkTimeTable(BaseTable):
         rows = []
         for worker_id, date_hours in worker_data.items():
             user_name = WorkEntry.objects.filter(worker_id=worker_id).first().worker.name
-            work_hours = [date_hours.get(date, 0) for date in dates]
+            work_hours = [date_hours.get(date, " ") for date in dates]
             rows.append({
                 "per_hour": per_hour_map[worker_id],
                 "user_name": user_name,

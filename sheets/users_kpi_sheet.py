@@ -73,6 +73,17 @@ class UsersKPITable(BaseTable):
 
         return rows
 
+    def get_today_per_day_dict(self):
+        rows = self.get_kpi_rows()
+
+        if not rows or len(rows) < 4:
+            return {}
+
+        today_row = rows[-2]  # строка за сегодняшний день (последняя перед 'Total')
+        per_day_value = today_row[-1]  # последний элемент строки
+
+        return {self.obj.name: per_day_value}
+
     # def get_kpi_rows(self):
     #     """
     #     Возвращает список строк:

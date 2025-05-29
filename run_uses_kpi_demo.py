@@ -27,12 +27,15 @@ from sheets.users_kpi_sheet import UsersKPITable
 #     main()
 
 
+
 def main():
     try:
         obj = BuildObject.objects.get(id=157)
         print(f"\n--- Объект: {obj.name} ---")
         table = UsersKPITable(obj)
-        table.write_kpi_table()
+        data = table.get_today_per_day_dict()
+        print(data)
+        # table.write_kpi_table()
     except BuildObject.DoesNotExist:
         print("Объект с таким ID не найден.")
     except Exception as e:
