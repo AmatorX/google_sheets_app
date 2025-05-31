@@ -9,7 +9,7 @@ from sheets.photos_sheet import PhotosTable
 
 from sheets.sheet1 import Sheet1Table
 from sheets.work_time_sheet import WorkTimeTable
-from .models import Worker, BuildObject, Material, Tool, ToolsSheet, WorkEntry
+from .models import Worker, BuildObject, Material, Tool, ToolsSheet, WorkEntry, BuildBudgetHistory
 from django.contrib.admin import SimpleListFilter
 
 from django.contrib import admin
@@ -185,7 +185,16 @@ class BuildObjectAdmin(admin.ModelAdmin):
     display_materials.short_description = 'Materials'
 
 
+class BuildBudgetHistoryAdmin(admin.ModelAdmin):
+    list_display = ('build_object', 'date', 'current_budget')  # Отображаемые поля в списке
+    list_filter = ('build_object', 'date')  # Фильтры справа
+    search_fields = ('build_object__name',)  # Поиск по имени объекта (предполагается, что у BuildObject есть поле name)
+    date_hierarchy = 'date'  # Удобная навигация по датам сверху
+    ordering = ('-date',)
+
+
 admin.site.register(Worker, WorkerAdmin)
+admin.site.register(BuildBudgetHistory, BuildBudgetHistoryAdmin)
 admin.site.register(BuildObject, BuildObjectAdmin)
 admin.site.register(Material, MaterialAdmin)
 admin.site.register(ToolsSheet, ToolsSheetAdmin)

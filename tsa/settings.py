@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-5t#_^sbft=0bv@$%0ka3kz7k_w1d5j@q0k0)@+(3m#+48bbt^#
 DEBUG = True
 
 # ALLOWED_HOSTS = [] # Локально
-ALLOWED_HOSTS = ['109.248.160.110', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['45.159.211.43', 'localhost', '127.0.0.1']
 
 
 
@@ -148,30 +148,35 @@ CELERY_BROKER_URL = 'redis://localhost:6379/0' # для тестов локал�
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
+
 CELERY_BEAT_SCHEDULE = {
-    'daily-update-worktime-tables': {
-        'task': 'sheets.tasks.update_all_worktime_tables',
-        'schedule': crontab(hour=21, minute=0),
-    },
     'daily-update-photo-tables': {
         'task': 'sheets.tasks.update_photos_tables',
         'schedule': crontab(hour=17, minute=0),
     },
+    'daily-kpi-data-for-tgbot': {
+        'task': 'sheets.tasks.process_daily_kpi_data_for_tgbot',
+        'schedule': crontab(hour=20, minute=57),
+    },
+    'daily-update-worktime-tables': {
+        'task': 'sheets.tasks.update_all_worktime_tables',
+        'schedule': crontab(hour=21, minute=0),
+    },
     'update-results-tables-daily': {
         'task': 'sheets.tasks.update_results_tables',
-        'schedule': crontab(hour=21, minute=10),
+        'schedule': crontab(hour=21, minute=15),
     },
     'update-daily-object-kpis': {
         'task': 'sheets.tasks.update_daily_object_kpis',
-        'schedule': crontab(hour=21, minute=20),
+        'schedule': crontab(hour=21, minute=30),
     },
     'update-daily-user-kpis': {
         'task': 'sheets.tasks.update_daily_user_kpis',
-        'schedule': crontab(hour=21, minute=30),
+        'schedule': crontab(hour=21, minute=45),
     },
-    'daily-kpi-data-for-tgbot': {
-        'task': 'sheets.tasks.process_daily_kpi_data_for_tgbot',
-        'schedule': crontab(hour=12, minute=41),
+    'run-monthly-summary-tasks': {
+        'task': 'sheets.tasks.run_monthly_summary_tasks',
+        'schedule': crontab(hour=22, minute=0),
     },
 }
 

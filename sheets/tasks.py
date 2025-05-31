@@ -1,6 +1,7 @@
 import json
 import os
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+from pytz import timezone
 from time import sleep
 
 import pytz
@@ -140,3 +141,71 @@ def process_daily_kpi_data_for_tgbot():
         json.dump(result_data, f, ensure_ascii=False, indent=2)
 
     return f"Готово. Данные сохранены в {filepath}"
+
+
+# def is_last_day_of_month(date_now=None):
+#     date_now = date_now or datetime.today()
+#     next_day = date_now + timedelta(days=1)
+#     return next_day.day == 1
+#
+# @shared_task
+# def run_monthly_summary_tasks():
+#     if not is_last_day_of_month():
+#         logger.info("Сегодня не последний день месяца. Задача завершена без выполнения.")
+#         return
+#
+#     logger.info("Сегодня последний день месяца. Запуск записи сводных данных...")
+#
+#     queryset = BuildObject.objects.all()
+#     for obj in queryset:
+#         try:
+#             # 1. KPI по пользователям
+#             table = Sheet1Table(obj)
+#             table.write_summary_workers()
+#             logger.info(f"Сводка результатов работников записана для '{obj.name}'")
+#
+#             # 2. Сводка по объекту
+#             table.write_summary()
+#             logger.info(f"Сводная таблица за месяц записана для '{obj.name}'")
+#
+#         except Exception as e:
+#             logger.error(f"Ошибка при обработке '{obj.name}': {e}")
+#         sleep(60)
+#
+#     logger.info("Месячная задача завершена.")
+
+
+def is_last_day_of_month(date_now=None):
+    date_now = date_now or datetime.today()
+    next_day = date_now + timedelta(days=1)
+    return next_day.day == 1
+
+@shared_task
+def run_monthly_summary_tasks():
+    # Текущее время в Эдмонтоне
+    edmonton_tz = timezone("America/Edmonton")
+    now_in_edmonton = datetime.now(edmonton_tz)
+
+    if not is_last_day_of_month(now_in_edmonton):
+        logger.info("Сегодня не последний день месяца по времени Калгари. Задача завершена без выполнения.")
+        return
+
+    logger.info("Сегодня последний день месяца по времени Калгари. Запуск записи сводных данных...")
+
+    queryset = BuildObject.objects.all()
+    for obj in queryset:
+        try:
+            # 1. KPI по пользователям
+            table = Sheet1Table(obj)
+            table.write_summary_workers()
+            logger.info(f"Сводка результатов работников записана для '{obj.name}'")
+            sleep(10)
+            # 2. Сводка по объекту
+            table.write_summary()
+            logger.info(f"Сводная таблица за месяц записана для '{obj.name}'")
+
+        except Exception as e:
+            logger.error(f"Ошибка при обработке '{obj.name}': {e}")
+        sleep(20)
+
+    logger.info("Месячная задача завершена.")
