@@ -182,14 +182,14 @@ def is_last_day_of_month(date_now=None):
 
 @shared_task
 def run_monthly_summary_tasks():
-    # Текущее время в Эдмонтоне
-    edmonton_tz = timezone("America/Edmonton")
-    now_in_edmonton = datetime.now(edmonton_tz)
-
-    if not is_last_day_of_month(now_in_edmonton):
-        logger.info("Сегодня не последний день месяца по времени Калгари. Задача завершена без выполнения.")
-        return
-
+    # --- Запуск только в конце месяца (временно отключено) ---
+    # edmonton_tz = timezone("America/Edmonton")
+    # now_in_edmonton = datetime.now(edmonton_tz)
+    #
+    # if not is_last_day_of_month(now_in_edmonton):
+    #     logger.info("Сегодня не последний день месяца по времени Калгари. Задача завершена без выполнения.")
+    #     return
+    # ---------------------------------------------------------
     logger.info("Сегодня последний день месяца по времени Калгари. Запуск записи сводных данных...")
 
     queryset = BuildObject.objects.all()
@@ -203,9 +203,9 @@ def run_monthly_summary_tasks():
             # 2. Сводка по объекту
             table.write_summary()
             logger.info(f"Сводная таблица за месяц записана для '{obj.name}'")
+            sleep(10)
 
         except Exception as e:
             logger.error(f"Ошибка при обработке '{obj.name}': {e}")
-        sleep(20)
 
     logger.info("Месячная задача завершена.")

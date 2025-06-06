@@ -17,6 +17,13 @@ class Sheet1Table(BaseTable):
         Возвращает бюджет на первую доступную дату текущего месяца.
         Если таких записей нет — возвращает исходный total_budget.
         """
+        # ####################################################### хардкод для мая
+        # year = 2025
+        # month = 5
+        #
+        # first_day = date(year, month, 1)
+        # today = date(year, month, monthrange(year, month)[1])
+
         today = date.today()
         first_day = today.replace(day=1)
 
@@ -32,6 +39,12 @@ class Sheet1Table(BaseTable):
         """
         Возвращает зарплату одного работника за текущий месяц.
         """
+        #######################################################################################################
+        # year = 2025
+        # month = 5
+        #
+        # first_day = date(year, month, 1)
+        # today = date(year, month, monthrange(year, month)[1])
         today = date.today()
         first_day = today.replace(day=1)
 
@@ -59,11 +72,12 @@ class Sheet1Table(BaseTable):
         print(f"get_all_workers_month_salary объект {self.obj.name} общая зп {round(total_salary, 2)}")
         return round(total_salary, 2)
 
-    def get_worker_month_earned(self, worker, month=None, year=None):
+    def get_worker_month_earned(self, worker, month=5, year=2025):
         """
         Возвращает заработок работника за установленный материал за указанный месяц.
         Если month и year не заданы, используется текущий месяц.
         """
+        ####################################################################################################
         print(f"Функция get_worker_month_earned для работника {worker} запущена")
         today = date.today()
         if month is None:
@@ -116,6 +130,12 @@ class Sheet1Table(BaseTable):
         """
         today = date.today()
         month_year = today.strftime("%B %Y")
+        # ######################################################################### хардкод для мая
+        # #
+        # year = 2025
+        # month = 5
+        # today = date(year, month, monthrange(year, month)[1])
+        # month_year = today.strftime("%B %Y")
 
         start_budget = self.get_start_budget()
         # salary = self.get_all_workers_month_salary()
@@ -145,7 +165,7 @@ class Sheet1Table(BaseTable):
         start_row = self.get_last_non_empty_row(column_letter='B') + 1
 
         # Две пустые строки
-        empty_rows = [[''], ['']]
+        empty_rows = [[' '], [' ']]
 
         # Сводные данные
         summary_rows = self.get_summary_rows()
@@ -182,9 +202,9 @@ class Sheet1Table(BaseTable):
         today = date.today()
         first_day = today.replace(day=1)
 
-        ############################################################################# для апреля и марта хардкод
+        # ############################################################################# для апреля и марта хардкод
         # year = 2025
-        # month = 4  # или 4 для апреля
+        # month = 5  # или 4 для апреля
         #
         # first_day = date(year, month, 1)
         # today = date(year, month, monthrange(year, month)[1])
@@ -212,7 +232,7 @@ class Sheet1Table(BaseTable):
 
         # Добавляем две пустые строки и строку с месяцем
         month_year = [[today.strftime("%B %Y"), "Earned per hour"]]
-        all_rows = [[''], ['']] + month_year + rows
+        all_rows = [[' '], [' ']] + month_year + rows
         print(f"Строки для записи функции get_workers_summary_rows: {all_rows}")
         return all_rows
 
@@ -223,6 +243,7 @@ class Sheet1Table(BaseTable):
         Затем применяет стили к блоку с работниками (кроме пустых строк).
         """
         # Получаем текущую последнюю строку в колонке B
+        self.remove_existing_month_data_if_exists()
         start_row = self.get_last_non_empty_row(column_letter='B') + 1
 
         # Все строки, включая две пустых, месяц и список работников
@@ -343,6 +364,14 @@ class Sheet1Table(BaseTable):
         today = date.today()
         first_day_of_month = today.replace(day=1)
 
+        ######################################################################## хардкод для мая
+
+        # year = 2025
+        # month = 5
+        #
+        # first_day_of_month = date(year, month, 1)
+        # today = date(year, month, monthrange(year, month)[1])
+
         entries = WorkEntry.objects.filter(
             build_object=self.obj,
             date__range=(first_day_of_month, today)
@@ -373,6 +402,12 @@ class Sheet1Table(BaseTable):
         """
         today = date.today()
         first_day_of_month = today.replace(day=1)
+        # ############################################################################# хардкод для мая
+        # year = 2025
+        # month = 5
+        #
+        # first_day_of_month = date(year, month, 1)
+        # today = date(year, month, monthrange(year, month)[1])
 
         entries = WorkEntry.objects.filter(
             build_object=self.obj,
@@ -402,4 +437,62 @@ class Sheet1Table(BaseTable):
                 total += material_cache[mat_name] * quantity
         print(f"Функция get_total_materials_income вернула {round(total, 2)}")
         return round(total, 2)
+
+
+    def remove_existing_month_data_if_exists(self):
+        sheet_name = self.sheet_name
+        range_name = f"{sheet_name}!A1:A"
+        month_year = date.today().strftime("%B %Y")
+
+        # Получаем значения из колонки A
+        response = self.service.spreadsheets().values().get(
+            spreadsheetId=self.spreadsheet_id,
+            range=range_name
+        ).execute()
+
+        col_values = response.get('values', [])
+        print(f"-------------------col values: {col_values}-------------------")
+
+        # Поиск строки со значением текущий месяц год
+        start_row = None
+        for idx, row in enumerate(col_values):
+            if row and row[0].strip() == month_year:
+                start_row = idx
+                break
+
+        if start_row is None:
+            print("Текущий месяц не найден — ничего не удаляем.")
+            return
+        # Определяем границу таблицы — пока есть непустые строки
+        end_row = start_row
+        for i in range(start_row + 1, len(col_values)):
+            if col_values[i] and col_values[i][0]:
+                end_row = i
+            else:
+                break
+
+        # Удалим строки от (start_row) до (end_row + 2)
+        delete_start = max(0, start_row )
+        delete_end = end_row + 2
+
+        print(f"Удаляем строки с {delete_start + 1} по {delete_end + 1}")
+
+        self.service.spreadsheets().batchUpdate(
+            spreadsheetId=self.spreadsheet_id,
+            body={
+                "requests": [
+                    {
+                        "deleteDimension": {
+                            "range": {
+                                "sheetId": self.sheet_id,
+                                "dimension": "ROWS",
+                                "startIndex": delete_start,
+                                "endIndex": delete_end + 1  # endIndex не включительно
+                            }
+                        }
+                    }
+                ]
+            }
+        ).execute()
+        print("Функция удаления существующего отчета за месяц. Удаление завершено.")
 
