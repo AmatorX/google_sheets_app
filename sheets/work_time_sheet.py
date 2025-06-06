@@ -64,7 +64,6 @@ class WorkTimeTable(BaseTable):
         start_row = None
         for idx, row in enumerate(col_values):
             if row and row[0].strip() == first_day_str:
-                print(f'Начало текущего чанка в строке {idx + 1}')
                 start_row = idx
                 break
 
@@ -75,7 +74,7 @@ class WorkTimeTable(BaseTable):
         # Определяем границу таблицы — пока есть непустые строки
         end_row = start_row
         for i in range(start_row + 1, len(col_values)):
-            if col_values[i] and col_values[i][0].strip():
+            if col_values[i] and col_values[i][0]:
                 end_row = i
             else:
                 break
@@ -103,7 +102,7 @@ class WorkTimeTable(BaseTable):
                 ]
             }
         ).execute()
-        print("Удаление завершено.")
+        print("Функция удаления существующего чанка. Удаление чанка завершено.")
 
     def build_worktime_rows(self, chunk_data):
         """
