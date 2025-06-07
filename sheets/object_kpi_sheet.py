@@ -107,10 +107,11 @@ class ObjectKPITable(BaseTable):
 
         done_today = self.get_done_today_dollars()
         budget_before = self.obj.current_budget
+        initial_budget = self.obj.total_budget
 
         new_budget = round(budget_before - done_today, 2)
-        done_percent = (done_today / budget_before * 100) if budget_before else 0
-        left_percent = (new_budget / budget_before * 100) if budget_before else 0
+        done_percent = (done_today / initial_budget * 100) if initial_budget else 0
+        left_percent = (new_budget / initial_budget * 100) if initial_budget else 0
 
         row = [
             day_of_month,

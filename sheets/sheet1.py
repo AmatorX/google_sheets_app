@@ -72,7 +72,7 @@ class Sheet1Table(BaseTable):
         print(f"get_all_workers_month_salary объект {self.obj.name} общая зп {round(total_salary, 2)}")
         return round(total_salary, 2)
 
-    def get_worker_month_earned(self, worker, month=5, year=2025):
+    def get_worker_month_earned(self, worker, month=None, year=None):
         """
         Возвращает заработок работника за установленный материал за указанный месяц.
         Если month и year не заданы, используется текущий месяц.
