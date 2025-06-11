@@ -267,6 +267,7 @@ class Sheet1Table(BaseTable):
         )
 
         print(f"Сводка по работникам записана, стили применены с {style_start_row} по {style_end_row}")
+        return worker_rows[3:]
 
     def get_total_materials_usage(self):
         """

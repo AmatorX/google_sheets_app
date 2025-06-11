@@ -1,4 +1,5 @@
 import json
+from datetime import date
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -88,7 +89,7 @@ class ToolsSheet(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk and ToolsSheet.objects.exists():
-            raise ValidationError("Можно создать только один объект ToolsSheet.")
+            raise ValidationError("You can create only one ToolsSheet object.")
         return super().save(*args, **kwargs)
 
     def __str__(self):
@@ -165,3 +166,22 @@ class BuildBudgetHistory(models.Model):
     class Meta:
         unique_together = ('build_object', 'date')  # На каждый день одна запись
         ordering = ['date']
+
+
+class ForemanAndWorkersKPISheet(models.Model):
+    name = models.CharField(max_length=255)
+    sh_url = models.URLField()
+    year = models.IntegerField(unique=True, default=date.today().year)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+class MonthlyKPIData(models.Model):
+    label = models.CharField(max_length=64, unique=True)
+    data = models.JSONField(default=dict)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.label

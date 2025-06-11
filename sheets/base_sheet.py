@@ -114,7 +114,46 @@ class BaseTable:
         workers = Worker.objects.filter(build_obj=self.build_object)
         return workers
 
-    def apply_styles(self, start_row, end_row, start_col, end_col):
+    # def apply_styles(self, start_row, end_row, start_col, end_col):
+    #     color = {'red': 0.85, 'green': 0.93, 'blue': 0.98}
+    #     requests = [
+    #         {
+    #             'repeatCell': {
+    #                 'range': {
+    #                     'sheetId': self.sheet_id,
+    #                     'startRowIndex': start_row - 1,
+    #                     'endRowIndex': end_row,
+    #                     'startColumnIndex': start_col,
+    #                     'endColumnIndex': end_col
+    #                 },
+    #                 'cell': {'userEnteredFormat': {'backgroundColor': color}},
+    #                 'fields': 'userEnteredFormat.backgroundColor'
+    #             }
+    #         },
+    #         {
+    #             'updateBorders': {
+    #                 'range': {
+    #                     'sheetId': self.sheet_id,
+    #                     'startRowIndex': start_row - 1,
+    #                     'endRowIndex': end_row,
+    #                     'startColumnIndex': start_col,
+    #                     'endColumnIndex': end_col
+    #                 },
+    #                 'top': {'style': 'SOLID', 'width': 1},
+    #                 'bottom': {'style': 'SOLID', 'width': 1},
+    #                 'left': {'style': 'SOLID', 'width': 1},
+    #                 'right': {'style': 'SOLID', 'width': 1},
+    #                 'innerHorizontal': {'style': 'SOLID', 'width': 1},
+    #                 'innerVertical': {'style': 'SOLID', 'width': 1}
+    #             }
+    #         }
+    #     ]
+    #     self.service.spreadsheets().batchUpdate(
+    #         spreadsheetId=self.spreadsheet_id,
+    #         body={'requests': requests}
+    #     ).execute()
+
+    def apply_styles(self, start_row, end_row, start_col, end_col, bold=False):
         color = {'red': 0.85, 'green': 0.93, 'blue': 0.98}
         requests = [
             {
@@ -126,8 +165,15 @@ class BaseTable:
                         'startColumnIndex': start_col,
                         'endColumnIndex': end_col
                     },
-                    'cell': {'userEnteredFormat': {'backgroundColor': color}},
-                    'fields': 'userEnteredFormat.backgroundColor'
+                    'cell': {
+                        'userEnteredFormat': {
+                            'backgroundColor': color,
+                            'textFormat': {
+                                'bold': bold  # Добавляем жирность в зависимости от параметра
+                            }
+                        }
+                    },
+                    'fields': 'userEnteredFormat(backgroundColor,textFormat.bold)'  # Обновляем оба поля
                 }
             },
             {
@@ -148,6 +194,7 @@ class BaseTable:
                 }
             }
         ]
+
         self.service.spreadsheets().batchUpdate(
             spreadsheetId=self.spreadsheet_id,
             body={'requests': requests}

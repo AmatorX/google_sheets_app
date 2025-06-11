@@ -1,15 +1,16 @@
 
 import logging
 from time import sleep
-
+from datetime import date
 from django.contrib import admin, messages
+from django.db import IntegrityError
 
 from sheets.photos_sheet import PhotosTable
 # from django_celery_beat.models import PeriodicTask, IntervalSchedule, CrontabSchedule, SolarSchedule, ClockedSchedule
 
 from sheets.sheet1 import Sheet1Table
 from sheets.work_time_sheet import WorkTimeTable
-from .models import Worker, BuildObject, Material, Tool, ToolsSheet, WorkEntry, BuildBudgetHistory
+from .models import Worker, BuildObject, Material, Tool, ToolsSheet, WorkEntry, BuildBudgetHistory, ForemanAndWorkersKPISheet
 from django.contrib.admin import SimpleListFilter
 
 from django.contrib import admin
@@ -172,9 +173,33 @@ def update_photos_tables(modeladmin, request, queryset):
 
     logger.info("Обновление фото-таблиц завершено")
 
+@admin.action(description="Update the result tables for sheet1")
+def run_monthly_summary_tasks(modeladmin, request, queryset):
+
+    logger.info("Сегодня последний день месяца по времени Калгари. Запуск записи сводных данных...")
+    all_workers_data = []
+    for obj in queryset:
+        try:
+            # 1. KPI по пользователям
+            table = Sheet1Table(obj)
+            workers_data = table.write_summary_workers()
+            logger.info(f"Сводка результатов работников записана для '{obj.name}'")
+            all_workers_data.extend(workers_data)
+            sleep(5)
+            # 2. Сводка по объекту
+            table.write_summary()
+            logger.info(f"Сводная таблица за месяц записана для '{obj.name}'")
+            sleep(5)
+
+        except Exception as e:
+            logger.error(f"Ошибка при обработке '{obj.name}': {e}")
+        logger.info(f"Таблицы для объекта {obj.name} записааны, ожидание 60 сек ")
+
+    logger.info("Месячная задача завершена.")
+
 
 class BuildObjectAdmin(admin.ModelAdmin):
-    actions = [write_materials_summary_action, write_users_kpi_data, record_summary_data, update_photos_tables]
+    actions = [update_all_worktime_tables, write_materials_summary_action, write_users_kpi_data, record_summary_data, update_photos_tables, run_monthly_summary_tasks]
     fields = ('name', 'total_budget', 'material', 'current_budget', 'sh_url', 'archive')
     list_display = ('name', 'archive', 'total_budget', 'current_budget', 'display_materials')
     list_filter = ['archive']
@@ -188,9 +213,14 @@ class BuildObjectAdmin(admin.ModelAdmin):
 class BuildBudgetHistoryAdmin(admin.ModelAdmin):
     list_display = ('build_object', 'date', 'current_budget')  # Отображаемые поля в списке
     list_filter = ('build_object', 'date')  # Фильтры справа
-    search_fields = ('build_object__name',)  # Поиск по имени объекта (предполагается, что у BuildObject есть поле name)
-    date_hierarchy = 'date'  # Удобная навигация по датам сверху
+    search_fields = ('build_object__name',)  # Поиск по имени объекта
+    date_hierarchy = 'date'  # навигация по датам сверху
     ordering = ('-date',)
+
+@admin.register(ForemanAndWorkersKPISheet)
+class ForemanAndWorkersKPIAdmin(admin.ModelAdmin):
+    list_display = ('name', 'sh_url', 'created_at')
+    search_fields = ('name',)
 
 
 admin.site.register(Worker, WorkerAdmin)

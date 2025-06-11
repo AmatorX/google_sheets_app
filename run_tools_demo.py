@@ -5,7 +5,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tsa.settings")
 django.setup()
 
 from sheets.tools_sheet import ToolsTable
-from buildings.models import ToolsSheet, Tool  # Добавлен Tool
+from tsa_app.models import ToolsSheet, Tool  # Добавлен Tool
 
 if __name__ == "__main__":
     try:
