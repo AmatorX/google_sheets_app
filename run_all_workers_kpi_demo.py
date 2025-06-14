@@ -1,123 +1,93 @@
+
+# import datetime
+# import os
+# from collections import defaultdict
+#
+# import django
+# import time
+#
+#
+# os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tsa.settings")
+# django.setup()
+#
+# from sheets.tasks import get_worker_materials_hourly_earnings
+# from sheets.all_workers_kpi_shhet import WorkersKPIMasterTable
+# from sheets.sheet1 import Sheet1Table
+# from tsa_app.models import ForemanAndWorkersKPISheet, BuildObject
+#
+#
+#
+#
+# def run_monthly_summary_tasks():
+#     data_dict = get_worker_materials_hourly_earnings(month=5, year=2025)
+#     print(f"Для записи дотсутпны данные: {data_dict}")
+#     try:
+#         write_kpi_data_to_master_table_demo(data_dict)
+#     except Exception as e:
+#         print(f"Ошибка при сохранении KPI: {e}")
+#         raise
+#     print("Задача завершена. Данные сохранены в БД и Google Sheets")
+#
+#
+#
+# def write_kpi_data_to_master_table_demo(data_dict):
+#     """
+#     Записывает агрегированные KPI-данные работников в мастер-таблицу Google Sheets.
+#     Функция выполняет следующие действия:
+#     1. Получает объект ForemanAndWorkersKPISheet за текущий год из БД
+#     2. Инициализирует WorkersKPIMasterTable с полученным объектом
+#     3. Записывает переданные KPI-данные в соответствующую таблицу Google Sheets
+#     Параметры:
+#         data_dict (dict): Словарь с данными KPI в формате:
+#                          {
+#                              "Имя работника1": суммарный_заработок,
+#                              "Имя работника2": суммарный_заработок,
+#                              ...
+#                          }
+#     Исключения:
+#         ForemanAndWorkersKPISheet.DoesNotExist: Если в базе нет записи за текущий год
+#         Exception: Любые другие ошибки при работе с Google Sheets API
+#     Пример использования:
+#         data = {"Иванов И.": 1500.50, "Петров А.": 2000.00}
+#         write_kpi_data_to_master_table(data)
+#     """
+#     current_year = datetime.datetime.now().year
+#     try:
+#         # Получаем объект ForemanAndWorkersKPISheet за текущий год
+#         kpi_sheet_obj = ForemanAndWorkersKPISheet.objects.get(year=current_year)
+#         workers_kpi_master_table = WorkersKPIMasterTable(kpi_sheet_obj)
+#         workers_kpi_master_table.write_monthly_kpi(data_dict)
+#     except ForemanAndWorkersKPISheet.DoesNotExist:
+#         error_msg = f"Не найден объект ForemanAndWorkersKPISheet за {current_year} год."
+#         print(error_msg)
+#         raise ForemanAndWorkersKPISheet.DoesNotExist(error_msg)
+#     except Exception as e:
+#         print(f"Ошибка при записи KPI данных в мастер-таблицу: {str(e)}")
+#         raise
+#
+#
+# if __name__ == "__main__":
+#     run_monthly_summary_tasks()
+
+
+
+
+
 import os
 import django
-import time
+
+
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tsa.settings")
 django.setup()
 
-from sheets.all_workers_kpi_shhet import WorkersKPIMasterTable
-from tsa_app.models import ForemanAndWorkersKPISheet
+from sheets.tasks import run_monthly_summary_tasks
+
 
 if __name__ == "__main__":
-    try:
-        sheet = ForemanAndWorkersKPISheet.objects.get(year=2025)  # или нужный год
-        print(f"Обрабатываем лист: {sheet.name}")
-        print(f"URL листа: {sheet.sh_url}")
-
-        table = WorkersKPIMasterTable(sheet)
-
-        test_data = {
-            "Алексеев Е.У.": 555,
-            "Алексеев А.П.": 16,
-            "Ванин С.С.": 5555,
-            "Ильин С.С.": 55,
-            "Генин С.С.": 222.44,
-            "Иванов И.И.": 123.0,
-            "Петров П.П.": 398.0,
-            "Сидоров А.С.": 1103.0,
-            "Иванов А.И.": 10.7,
-            "Петров А.П.": 28.0,
-            "Сидоров С.С.": 1.44,
-            "Васильев С.С.": 323.88,
-            "Ильин м.С.": 100,
-            "Генин м.С.": 222.44,
-            "Алексеев м.П.": 16,
-            "Ванин м.С.": 600,
-            "Иванов м.И.": 123.0,
-            "Петров м.П.": 398.0,
-            "Сидоров м.С.": 1103.0,
-            "Иванов ч.И.": 10.7,
-            "Петров ч.П.": 28.0,
-            "Сидоров ч.С.": 1.44,
-            "Васильев ч.С.": 323.88,
-            "Ильин н.С.": 100,
-            "Генин н.С.": 222.44,
-            "Алексеев н.П.": 16,
-            "Ванин С.н.": 600,
-            "Иванов И.н.": 123.0,
-            "Петров П.н.": 398.0,
-            "Сидоров А.н.": 1103.0,
-            "Иванов А.н.": 10.7,
-            "Петров А.н.": 28.0,
-            "Сидоров С.н.": 1.44,
-            "Васильев С.н.": 323.88,
-            "Ильин Ф.С.": 100,
-            "Генин ф.С.": 222.44,
-            "Алексеев ф.П.": 16,
-            "Ванин ф.С.": 600,
-            "Иванов ф.И.": 123.0,
-            "Петров ф.П.": 398.0,
-            "Сидоров ф.С.": 1103.0,
-            "Иванов Я.И.": 10.7,
-            "Петров я.П.": 28.0,
-            "Сидоров я.С.": 1.44,
-            "Васильев я.С.": 323.88,
-            "Ильин я.С.": 100,
-            "Генин я.С.": 222.44,
-            "Алексеев я.П.": 16,
-            "Ванин я.С.": 600,
-            "Иванов я.И.": 123.0,
-            "Петров л.П.": 398.0,
-            "Сидоров Д.С.": 1103.0,
-            "Иванов л.И.": 10.7,
-            "Петров Д.П.": 28.0,
-            "Сидоров л.С.": 1.44,
-            "Васильев д.С.": 323.88,
-            "Ильин У.С.": 100,
-            "Генин у.С.": 222.44,
-            "Алексеев у.П.": 16,
-            "Ванин у.С.": 600,
-            "Иванов у.И.": 123.0,
-            "Петров у.П.": 398.0,
-            "Сидоров у.С.": 1103.0,
-            "Иванов ц.И.": 10.7,
-            "Петров ц.П.": 28.0,
-            "Сидоров ц.С.": 1.44,
-            "Васильев ц.С.": 323.88,
-            "Ванин d.С.": 600,
-            "Иванов d.И.": 123.0,
-            "Петров уd.П.": 398.0,
-            "Сидоров ]d.С.": 1103.0,
-            "Иванов ц.d.": 10.7,
-            "Петров ц.d.": 28.0,
-            "Сидоров dС.": 1.44,
-            "Васильев d.С.": 323.88,
-            "Ванин w.С.": -111,
-            "Иванов w.И.": 123.0,
-            "Петров w.П.": 398.0,
-            "Сидоров w.С.": 1103.0,
-            "Иванов wИ.": 10.7,
-            "Петров q.П.": 28.0,
-            "Сидоров q.С.": 1.44,
-            "Васильев q.С.": -3000,
-            "Васильев O.С.": -7.77,
-            "Иванов K.": 10.7,
-            "Петров K": 28.0,
-            "Сидоров K": 1.44,
-            "Васильев K M": "777.777",
-            "Васильев K": "67.77",
-        }
+    run_monthly_summary_tasks()
 
 
-        start_time = time.time()
-        table.write_monthly_kpi(test_data)
-        # table.write_monthly_kpi_new(test_data)
-        end_time = time.time()
-        elapsed_time = end_time - start_time
 
-        print("Тестовая запись KPI завершена успешно.")
-        print(f"Время выполнения: {elapsed_time:.4f} секунд.")
-    except ForemanAndWorkersKPISheet.DoesNotExist:
-        print("Объект ForemanAndWorkersKPISheet с указанным годом не найден.")
-    except Exception as e:
-        print(f"Ошибка при обработке листа: {e}")
+
+

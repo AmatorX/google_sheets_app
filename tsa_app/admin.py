@@ -209,6 +209,11 @@ class BuildObjectAdmin(admin.ModelAdmin):
         return ", ".join([material.name for material in obj.material.all()])
     display_materials.short_description = 'Materials'
 
+    # Запрещаем удаление объекта
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
 
 class BuildBudgetHistoryAdmin(admin.ModelAdmin):
     list_display = ('build_object', 'date', 'current_budget')  # Отображаемые поля в списке

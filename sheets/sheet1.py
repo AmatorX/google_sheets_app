@@ -12,29 +12,6 @@ class Sheet1Table(BaseTable):
         self.sh_url = obj.sh_url
         super().__init__(obj=obj, sheet_name="Sheet1")
 
-    def get_start_budget(self):
-        """
-        Возвращает бюджет на первую доступную дату текущего месяца.
-        Если таких записей нет — возвращает исходный total_budget.
-        """
-        # ####################################################### хардкод для мая
-        # year = 2025
-        # month = 5
-        #
-        # first_day = date(year, month, 1)
-        # today = date(year, month, monthrange(year, month)[1])
-
-        today = date.today()
-        first_day = today.replace(day=1)
-
-        # Первая запись за текущий месяц
-        entry = self.obj.budget_history.filter(date__gte=first_day).order_by('date').first()
-
-        if entry:
-            print(f"Функция get_start_budget вернула {entry.current_budget}")
-            return entry.current_budget
-        return self.obj.total_budget
-
     def get_worker_month_salary(self, worker):
         """
         Возвращает зарплату одного работника за текущий месяц.
@@ -106,7 +83,6 @@ class Sheet1Table(BaseTable):
                 except Material.DoesNotExist:
                     print(f"Материал '{material_name}' не найден. Пропускаем.")
                     continue
-        print(f"Worker -> {worker.name} ||| get_worker_month_earned -> {round(earned, 2)}")
         return round(earned, 2)
 
     def get_month_earned(self):
@@ -137,24 +113,25 @@ class Sheet1Table(BaseTable):
         # today = date(year, month, monthrange(year, month)[1])
         # month_year = today.strftime("%B %Y")
 
-        start_budget = self.get_start_budget()
-        # salary = self.get_all_workers_month_salary()
-        # earned = self.get_month_earned()
+        # start_budget = self.get_start_budget()
+        budget = self.obj.total_budget
         salary = self.get_total_salary()
-        earned = self.get_total_materials_income()
+        if salary:
+            earned = self.get_total_materials_income()
 
-        result = earned - salary
-        progress = round(((earned / start_budget * 100) if start_budget else 0), 2)
-        progress = str(progress)+ '%'
+            result = earned - salary
+            progress = round(((earned / budget * 100) if budget else 0), 2)
+            progress = str(progress)+ '%'
 
-        return [
-            [month_year],
-            ['Bldg cost', start_budget],
-            ['Salary', salary],
-            ['Earned', earned],
-            ['Result', result],
-            ['Progress', progress]
-        ]
+            return [
+                [month_year],
+                ['Bldg cost', budget],
+                ['Salary', salary],
+                ['Earned', earned],
+                ['Result', result],
+                ['Progress', progress]
+            ]
+        return None
 
     def write_summary(self):
         """
@@ -169,25 +146,26 @@ class Sheet1Table(BaseTable):
 
         # Сводные данные
         summary_rows = self.get_summary_rows()
+        if summary_rows:
 
-        # Общие данные для записи
-        all_rows = empty_rows + summary_rows
+            # Общие данные для записи
+            all_rows = empty_rows + summary_rows
 
-        # Вычисляем диапазон, например 'A15'
-        start_cell = f"A{start_row}"
+            # Вычисляем диапазон, например 'A15'
+            start_cell = f"A{start_row}"
 
-        # Запись в таблицу
-        self.update_data(start_cell, all_rows)
+            # Запись в таблицу
+            self.update_data(start_cell, all_rows)
 
-        # Применяем стили только к summary_rows (без пустых строк)
-        style_start_row = start_row + len(empty_rows)
-        style_end_row = style_start_row + len(summary_rows) - 1
-        self.apply_styles(
-            start_row=style_start_row,
-            end_row=style_end_row,
-            start_col=0,
-            end_col=2
-        )
+            # Применяем стили только к summary_rows (без пустых строк)
+            style_start_row = start_row + len(empty_rows)
+            style_end_row = style_start_row + len(summary_rows) - 1
+            self.apply_styles(
+                start_row=style_start_row,
+                end_row=style_end_row,
+                start_col=0,
+                end_col=2
+            )
 
         print(f"Сводная таблица записана, стили применены с {style_start_row} по {style_end_row - 1}")
 
@@ -205,7 +183,6 @@ class Sheet1Table(BaseTable):
         # ############################################################################# для апреля и марта хардкод
         # year = 2025
         # month = 5  # или 4 для апреля
-        #
         # first_day = date(year, month, 1)
         # today = date(year, month, monthrange(year, month)[1])
 
@@ -215,6 +192,8 @@ class Sheet1Table(BaseTable):
             date__gte=first_day,
             date__lte=today
         )
+        if not entries.exists():  # Если записей нет — сразу выходим
+            return None
 
         worker_hours = defaultdict(float)
         for entry in entries:
@@ -249,25 +228,27 @@ class Sheet1Table(BaseTable):
         # Все строки, включая две пустых, месяц и список работников
         worker_rows = self.get_workers_summary_rows()
 
-        # Вычисляем начальную ячейку, например "A27"
-        start_cell = f"A{start_row}"
+        if worker_rows:
+            # Вычисляем начальную ячейку, например "A27"
+            start_cell = f"A{start_row}"
 
-        # Запись данных
-        self.update_data(start_cell, worker_rows)
+            # Запись данных
+            self.update_data(start_cell, worker_rows)
 
-        # Применяем стили ко всем строкам, кроме первых двух пустых
-        style_start_row = start_row + 2
-        style_end_row = start_row + len(worker_rows) - 1
+            # Применяем стили ко всем строкам, кроме первых двух пустых
+            style_start_row = start_row + 2
+            style_end_row = start_row + len(worker_rows) - 1
 
-        self.apply_styles(
-            start_row=style_start_row,
-            end_row=style_end_row,
-            start_col=0,
-            end_col=2
-        )
+            self.apply_styles(
+                start_row=style_start_row,
+                end_row=style_end_row,
+                start_col=0,
+                end_col=2
+            )
 
-        print(f"Сводка по работникам записана, стили применены с {style_start_row} по {style_end_row}")
-        return worker_rows[3:]
+            print(f"Сводка по работникам записана, стили применены с {style_start_row} по {style_end_row}")
+            return worker_rows[3:]
+        return None
 
     def get_total_materials_usage(self):
         """
@@ -301,7 +282,6 @@ class Sheet1Table(BaseTable):
         """
         summary = self.get_total_materials_usage()
         if not summary:
-            print("Нет данных для записи материалов.")
             return
 
         # Формируем данные для записи
@@ -436,7 +416,6 @@ class Sheet1Table(BaseTable):
                     material_cache[mat_name] = material_obj.price if material_obj and material_obj.price else 0
 
                 total += material_cache[mat_name] * quantity
-        print(f"Функция get_total_materials_income вернула {round(total, 2)}")
         return round(total, 2)
 
 
@@ -452,7 +431,6 @@ class Sheet1Table(BaseTable):
         ).execute()
 
         col_values = response.get('values', [])
-        print(f"-------------------col values: {col_values}-------------------")
 
         # Поиск строки со значением текущий месяц год
         start_row = None
@@ -496,4 +474,3 @@ class Sheet1Table(BaseTable):
             }
         ).execute()
         print("Функция удаления существующего отчета за месяц. Удаление завершено.")
-

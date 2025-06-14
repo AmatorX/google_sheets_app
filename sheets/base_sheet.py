@@ -80,7 +80,7 @@ class BaseTable:
             logger.warning(f"Лист '{self.sheet_name}' не найден.")
             return None
         except Exception as e:
-            logger.error(f"Ошибка при получении sheetId для '{self.sheet_name}': {e}")
+            logger.error(f"Ошибка при получении sheetId для '{self.obj.sh_url}': {e}")
             return None
 
 

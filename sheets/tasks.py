@@ -1,5 +1,6 @@
 import json
 import os
+from calendar import monthrange
 from collections import defaultdict
 from datetime import datetime, date, timedelta
 from pytz import timezone
@@ -16,7 +17,8 @@ from sheets.results_sheet import ResultsTable
 from sheets.sheet1 import Sheet1Table
 from sheets.users_kpi_sheet import UsersKPITable
 from sheets.work_time_sheet import WorkTimeTable
-from tsa_app.models import BuildObject, MonthlyKPIData, ForemanAndWorkersKPISheet
+from tsa_app.models import BuildObject, MonthlyKPIData, ForemanAndWorkersKPISheet, WorkEntry, Material
+
 
 logger = logging.getLogger(__name__)
 
@@ -198,7 +200,7 @@ def run_monthly_summary_tasks():
     #     return
     # ---------------------------------------------------------
     logger.info("Запуск записи сводных данных...")
-    all_workers_data = []
+    # all_workers_data = []
     queryset = BuildObject.objects.all()
     if not queryset.exists():
         logger.warning("Нет объектов BuildObject для обработки")
@@ -207,10 +209,8 @@ def run_monthly_summary_tasks():
         try:
             # 1. KPI по пользователям
             table = Sheet1Table(obj)
-            workers_data = table.write_summary_workers()
+            table.write_summary_workers()
             logger.info(f"Сводка результатов работников записана для '{obj.name}'")
-            # print(f"workers_data -> {workers_data}")
-            all_workers_data.extend(workers_data)
             sleep(5)
             # 2. Сводка по объекту
             table.write_summary()
@@ -220,14 +220,8 @@ def run_monthly_summary_tasks():
         except Exception as e:
             logger.error(f"Ошибка при обработке '{obj.name}': {e}")
 
-    # Формируем данные для записи, преобразуем список в словарь
-    data_dict = defaultdict(float)
-    for row in all_workers_data:
-        name, earnings = row[0], row[1]
-        data_dict[name] += earnings
-    if not data_dict:
-        logger.warning("Нет данных для сохранения KPI")
-        return
+    # Формируем данные для записи
+    data_dict = get_worker_materials_hourly_earnings()
     try:
         save_to_db_current_month_kpi(data_dict)
         write_kpi_data_to_master_table(data_dict)
@@ -268,7 +262,7 @@ def save_to_db_current_month_kpi(data_dict):
     return obj
 
 
-def write_kpi_data_to_master_table(data_dict):
+def write_kpi_data_to_master_table(data_dict: dict):
     """
     Записывает агрегированные KPI-данные работников в мастер-таблицу Google Sheets.
     Функция выполняет следующие действия:
@@ -302,3 +296,44 @@ def write_kpi_data_to_master_table(data_dict):
     except Exception as e:
         logger.error(f"Ошибка при записи KPI данных в мастер-таблицу: {str(e)}")
         raise
+
+
+
+def get_worker_materials_hourly_earnings(month=None, year=None):
+    """
+    Возвращает словарь {worker_name: заработок в час за установленные материалы} за указанный месяц.
+    Если month=None, берёт текущий месяц и год.
+    """
+
+    today = date.today()
+    month = month or today.month
+    year = year or today.year
+
+    start_date = date(year, month, 1)
+    end_date = date(year, month, monthrange(year, month)[1])
+
+    entries = WorkEntry.objects.filter(date__range=(start_date, end_date))
+
+    material_prices = {
+        m.name: m.price for m in Material.objects.all() if m.price is not None
+    }
+
+    worker_data = defaultdict(lambda: {'price': 0.0, 'hours': 0.0})
+
+    for entry in entries:
+        name = entry.worker.name
+        hours = entry.get_worked_hours_as_float()
+        materials = entry.get_materials_used()
+
+        cost = sum(
+            float(material_prices.get(mat, 0)) * float(qty)
+            for mat, qty in materials.items()
+        )
+
+        worker_data[name]['price'] += cost
+        worker_data[name]['hours'] += hours
+
+    return {
+        name: round(data['price'] / data['hours'], 2) if data['hours'] else 0.0
+        for name, data in worker_data.items()
+    }
