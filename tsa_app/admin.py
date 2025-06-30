@@ -3,13 +3,15 @@ import logging
 from time import sleep
 from datetime import date
 from django.contrib import admin, messages
-from django.db import IntegrityError
+from django.shortcuts import redirect, render
+from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 
 from sheets.photos_sheet import PhotosTable
 # from django_celery_beat.models import PeriodicTask, IntervalSchedule, CrontabSchedule, SolarSchedule, ClockedSchedule
 
 from sheets.sheet1 import Sheet1Table
 from sheets.work_time_sheet import WorkTimeTable
+from .form import MonthYearForm
 from .models import Worker, BuildObject, Material, Tool, ToolsSheet, WorkEntry, BuildBudgetHistory, ForemanAndWorkersKPISheet
 from django.contrib.admin import SimpleListFilter
 
@@ -17,7 +19,45 @@ from django.contrib import admin
 from .models import BuildObject
 
 
+
 logger = logging.getLogger(__name__)
+
+
+def with_month_year_form(template_name="admin/month_year_form.html"):
+    """
+    Декоратор для actions в админке, чтобы перед показом формы запросить у пользователя месяц и год
+    и передать эти значения в оригинальную функцию действия
+
+    :param template_name: Путь к HTML-шаблону формы, по умолчанию 'admin/month_year_form.html'
+    :return: Обёрнутая admin action функция, с дополнительными параметрами month и year
+    """
+    def decorator(action_func):
+        def wrapper(modeladmin, request, queryset):
+            if "apply" in request.POST:
+                form = MonthYearForm(request.POST)
+                if form.is_valid():
+                    month = form.cleaned_data["month"]
+                    year = form.cleaned_data["year"]
+                    ids = request.POST.getlist("_selected_action")
+                    selected_objects = queryset.model.objects.filter(pk__in=ids)
+                    return action_func(modeladmin, request, selected_objects, month, year)
+            else:
+                form = MonthYearForm(initial={
+                    "_selected_action": request.POST.getlist(ACTION_CHECKBOX_NAME)
+                })
+
+            return render(request, template_name, {
+                "objects": queryset,
+                "form": form,
+                "title": "Select the month and year to count and record the data.",
+                "action_checkbox_name": ACTION_CHECKBOX_NAME,
+                "action_name": action_func.__name__,
+            })
+
+        wrapper.__name__ = action_func.__name__
+        wrapper.__doc__ = action_func.__doc__
+        return wrapper
+    return decorator
 
 
 class WorkEntryAdmin(admin.ModelAdmin):
@@ -170,32 +210,29 @@ def update_photos_tables(modeladmin, request, queryset):
         except Exception as e:
             logger.error(f"Ошибка при обработке объекта {obj.name}: {e}")
         sleep(10)
-
     logger.info("Обновление фото-таблиц завершено")
 
 @admin.action(description="Update the result tables for sheet1")
-def run_monthly_summary_tasks(modeladmin, request, queryset):
-
-    logger.info("Сегодня последний день месяца по времени Калгари. Запуск записи сводных данных...")
+@with_month_year_form()
+def run_monthly_summary_tasks(modeladmin, request, queryset, month, year):
     all_workers_data = []
     for obj in queryset:
+        print(obj.name, month, year)
         try:
             # 1. KPI по пользователям
             table = Sheet1Table(obj)
-            workers_data = table.write_summary_workers()
+            workers_data = table.write_summary_workers(month, year)
             logger.info(f"Сводка результатов работников записана для '{obj.name}'")
             all_workers_data.extend(workers_data)
             sleep(5)
             # 2. Сводка по объекту
-            table.write_summary()
+            table.write_summary(month, year)
             logger.info(f"Сводная таблица за месяц записана для '{obj.name}'")
             sleep(5)
 
         except Exception as e:
             logger.error(f"Ошибка при обработке '{obj.name}': {e}")
         logger.info(f"Таблицы для объекта {obj.name} записааны, ожидание 60 сек ")
-
-    logger.info("Месячная задача завершена.")
 
 
 class BuildObjectAdmin(admin.ModelAdmin):
@@ -213,8 +250,6 @@ class BuildObjectAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
-
-
 class BuildBudgetHistoryAdmin(admin.ModelAdmin):
     list_display = ('build_object', 'date', 'current_budget')  # Отображаемые поля в списке
     list_filter = ('build_object', 'date')  # Фильтры справа
@@ -222,12 +257,13 @@ class BuildBudgetHistoryAdmin(admin.ModelAdmin):
     date_hierarchy = 'date'  # навигация по датам сверху
     ordering = ('-date',)
 
-@admin.register(ForemanAndWorkersKPISheet)
 class ForemanAndWorkersKPIAdmin(admin.ModelAdmin):
     list_display = ('name', 'sh_url', 'created_at')
     search_fields = ('name',)
 
 
+admin.site.site_header = "TSA"
+admin.site.register(ForemanAndWorkersKPISheet, ForemanAndWorkersKPIAdmin)
 admin.site.register(Worker, WorkerAdmin)
 admin.site.register(BuildBudgetHistory, BuildBudgetHistoryAdmin)
 admin.site.register(BuildObject, BuildObjectAdmin)

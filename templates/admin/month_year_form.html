@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Input month and year</title>
+</head>
+<body>
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<style>
+.button {
+    padding: 14px 40px;
+    font-size: 18px;
+    min-width: 150px;
+    height: 40px;         /* ← увеличивает высоту кнопки */
+    line-height: 40px;    /* ← выравнивает текст по вертикали (опционально) */
+}
+</style>
+
+<form method="post">{% csrf_token %}
+  {{ form.as_p }}
+  {% for obj in objects %}
+    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}">
+  {% endfor %}
+  <input type="hidden" name="action" value="{{ action_name }}">
+  <button type="submit" name="apply" class="button">{% trans 'Confirm' %}</button>
+  <button type="button" onclick="window.history.back();" class="button">{% trans 'Back' %}</button>
+</form>
+{% endblock %}
+
+</body>
+</html>

@@ -101,7 +101,6 @@ class BaseTable:
                 range=range_name
             ).execute()
             values = result.get('values', [])
-            print(f'get_last_non_empty_row values: {len(values) if values else 0}')
             return len(values) if values else 0
         except Exception as e:
             logger.error(f"Ошибка при получении последней непустой строки в столбце {column_letter}: {e}")
