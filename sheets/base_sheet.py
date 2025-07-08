@@ -1,5 +1,4 @@
 import logging
-from typing import List, Any
 from utils.service import get_service
 
 logger = logging.getLogger(__name__)
@@ -112,45 +111,6 @@ class BaseTable:
         from tsa_app.models import Worker  # Импортируем модель внутри метода, чтобы избежать циклических зависимостей
         workers = Worker.objects.filter(build_obj=self.build_object)
         return workers
-
-    # def apply_styles(self, start_row, end_row, start_col, end_col):
-    #     color = {'red': 0.85, 'green': 0.93, 'blue': 0.98}
-    #     requests = [
-    #         {
-    #             'repeatCell': {
-    #                 'range': {
-    #                     'sheetId': self.sheet_id,
-    #                     'startRowIndex': start_row - 1,
-    #                     'endRowIndex': end_row,
-    #                     'startColumnIndex': start_col,
-    #                     'endColumnIndex': end_col
-    #                 },
-    #                 'cell': {'userEnteredFormat': {'backgroundColor': color}},
-    #                 'fields': 'userEnteredFormat.backgroundColor'
-    #             }
-    #         },
-    #         {
-    #             'updateBorders': {
-    #                 'range': {
-    #                     'sheetId': self.sheet_id,
-    #                     'startRowIndex': start_row - 1,
-    #                     'endRowIndex': end_row,
-    #                     'startColumnIndex': start_col,
-    #                     'endColumnIndex': end_col
-    #                 },
-    #                 'top': {'style': 'SOLID', 'width': 1},
-    #                 'bottom': {'style': 'SOLID', 'width': 1},
-    #                 'left': {'style': 'SOLID', 'width': 1},
-    #                 'right': {'style': 'SOLID', 'width': 1},
-    #                 'innerHorizontal': {'style': 'SOLID', 'width': 1},
-    #                 'innerVertical': {'style': 'SOLID', 'width': 1}
-    #             }
-    #         }
-    #     ]
-    #     self.service.spreadsheets().batchUpdate(
-    #         spreadsheetId=self.spreadsheet_id,
-    #         body={'requests': requests}
-    #     ).execute()
 
     def apply_styles(self, start_row, end_row, start_col, end_col, bold=False):
         color = {'red': 0.85, 'green': 0.93, 'blue': 0.98}

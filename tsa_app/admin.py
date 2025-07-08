@@ -5,22 +5,25 @@ from datetime import date
 from django.contrib import admin, messages
 from django.shortcuts import redirect, render
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
-
 from sheets.photos_sheet import PhotosTable
-# from django_celery_beat.models import PeriodicTask, IntervalSchedule, CrontabSchedule, SolarSchedule, ClockedSchedule
-
 from sheets.sheet1 import Sheet1Table
 from sheets.work_time_sheet import WorkTimeTable
 from .form import MonthYearForm
-from .models import Worker, BuildObject, Material, Tool, ToolsSheet, WorkEntry, BuildBudgetHistory, ForemanAndWorkersKPISheet
+from .models import Worker, BuildObject, Material, Tool, ToolsSheet, WorkEntry, BuildBudgetHistory, ForemanAndWorkersKPISheet, MediaProxy
 from django.contrib.admin import SimpleListFilter
-
 from django.contrib import admin
-from .models import BuildObject
-
 
 
 logger = logging.getLogger(__name__)
+
+
+class MediaBrowserAdmin(admin.ModelAdmin):
+    def changelist_view(self, request, extra_context=None):
+        return redirect('media_browser')
+
+    def has_add_permission(self, request): return False
+    def has_change_permission(self, request, obj=None): return False
+    def has_delete_permission(self, request, obj=None): return False
 
 
 def with_month_year_form(template_name="admin/month_year_form.html"):
@@ -263,6 +266,7 @@ class ForemanAndWorkersKPIAdmin(admin.ModelAdmin):
 
 
 admin.site.site_header = "TSA"
+admin.site.register(MediaProxy, MediaBrowserAdmin)
 admin.site.register(ForemanAndWorkersKPISheet, ForemanAndWorkersKPIAdmin)
 admin.site.register(Worker, WorkerAdmin)
 admin.site.register(BuildBudgetHistory, BuildBudgetHistoryAdmin)
@@ -271,4 +275,5 @@ admin.site.register(Material, MaterialAdmin)
 admin.site.register(ToolsSheet, ToolsSheetAdmin)
 admin.site.register(Tool, ToolAdmin)
 admin.site.register(WorkEntry, WorkEntryAdmin)
+
 

@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-5t#_^sbft=0bv@$%0ka3kz7k_w1d5j@q0k0)@+(3m#+48bbt^#
 DEBUG = True
 
 # ALLOWED_HOSTS = [] # Локально
-ALLOWED_HOSTS = ['45.159.211.43', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['46.8.227.113', 'localhost', '127.0.0.1']
 
 
 
@@ -79,20 +79,20 @@ WSGI_APPLICATION = 'tsa.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
-# # Для деплоя в докере
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': '/app/db/db.sqlite3',  # Указываем правильный путь
+#         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
+
+# Для деплоя в докере
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': '/app/db/db.sqlite3',  # Указываем правильный путь
+    }
+}
 
 
 # Password validation
@@ -135,6 +135,10 @@ USE_I18N = True
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+MEDIA_URL = '/media/'
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  Для тестов локально
+MEDIA_ROOT = os.path.join(BASE_DIR, '../media') # Для деплоя и работы в доекере на сервере
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -143,17 +147,17 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CELERY_ENABLE_UTC = False
 CELERY_TIMEZONE = 'America/Edmonton'
-CELERY_BROKER_URL = 'redis://localhost:6379/0' # для тестов локально
-# CELERY_BROKER_URL = 'redis://redis:6379/0' # Для раблоты в докер контейнере
+# CELERY_BROKER_URL = 'redis://localhost:6379/0' # для тестов локально
+CELERY_BROKER_URL = 'redis://redis:6379/0' # Для раблоты в докер контейнере
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
 
 CELERY_BEAT_SCHEDULE = {
-    'daily-update-photo-tables': {
-        'task': 'sheets.tasks.update_photos_tables',
-        'schedule': crontab(hour=17, minute=0),
-    },
+    # 'daily-update-photo-tables': {
+    #     'task': 'sheets.tasks.update_photos_tables',
+    #     'schedule': crontab(hour=17, minute=0),
+    # },
     'daily-kpi-data-for-tgbot': {
         'task': 'sheets.tasks.process_daily_kpi_data_for_tgbot',
         'schedule': crontab(hour=20, minute=57),

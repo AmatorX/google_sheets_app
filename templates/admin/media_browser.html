@@ -1,0 +1,28 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <h1>📁 Photo files</h1>
+
+  {% if current %}
+    <p>
+      {% if parent %}
+        <a class="button" href="?path={{ parent }}">⬅ Back</a>
+      {% else %}
+        <a class="button" href="{% url 'media_browser' %}">⬅ Back</a>
+      {% endif %}
+    </p>
+  {% endif %}
+
+  <ul>
+    {% for item in items %}
+      <li>
+        {% if item.is_dir %}
+          📂 <a href="?path={{ item.path }}">{{ item.name }}</a>
+        {% else %}
+          🖼 {{ item.name }} —
+          <a href="{% url 'download_file' %}?path={{ item.path }}">Скачать</a>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}

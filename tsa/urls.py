@@ -16,7 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from tsa_app import admin_views
 
 urlpatterns = [
-    path('', admin.site.urls),
+    path('media-browser/', admin_views.media_browser, name='media_browser'),
+    path('download-file/', admin_views.download_file, name='download_file'),
+    path('', admin.site.urls),  # ← подключать последним
 ]
