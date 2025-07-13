@@ -187,15 +187,15 @@ class MonthlyKPIData(models.Model):
         return self.label
 
 
-class SummarySheet(models.Model):
+class GeneralStatisticSheet(models.Model):
     sh_url = models.URLField("Link to Google Spreadsheet", unique=True)
-    sheet_name = models.CharField("List name", max_length=255, editable=False)
+    sheet_name = models.CharField("Sheet name", max_length=255, editable=False)
 
     def save(self, *args, **kwargs):
         if not self.sheet_name:
             current_year = date.today().year
-            self.sheet_name = f"General results {current_year}"
-        if SummarySheet.objects.exists() and not self.pk:
+            self.sheet_name = f"General Results {current_year}"
+        if GeneralStatisticSheet.objects.exists() and not self.pk:
             return
         super().save(*args, **kwargs)
 

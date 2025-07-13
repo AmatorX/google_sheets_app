@@ -32,7 +32,9 @@ class BaseTable:
     def __init__(self, obj=None, sheet_name=None):
         self.obj = obj
         self.sh_url = obj.sh_url
-        self.sheet_name = sheet_name
+        # self.sheet_name = sheet_name
+        # Рассмотреть использование кода ниже, как более гибкое решение вместо self.sheet_name = sheet_name
+        self.sheet_name = sheet_name or getattr(obj, "sheet_name", None)
         self.service = get_service()
         self.spreadsheet_id = self.get_spreadsheet_id()
         self.sheet_id = self.get_sheet_id()
@@ -112,30 +114,83 @@ class BaseTable:
         workers = Worker.objects.filter(build_obj=self.build_object)
         return workers
 
-    def apply_styles(self, start_row, end_row, start_col, end_col, bold=False):
-        color = {'red': 0.85, 'green': 0.93, 'blue': 0.98}
-        requests = [
-            {
-                'repeatCell': {
-                    'range': {
-                        'sheetId': self.sheet_id,
-                        'startRowIndex': start_row - 1,
-                        'endRowIndex': end_row,
-                        'startColumnIndex': start_col,
-                        'endColumnIndex': end_col
-                    },
-                    'cell': {
-                        'userEnteredFormat': {
-                            'backgroundColor': color,
-                            'textFormat': {
-                                'bold': bold  # Добавляем жирность в зависимости от параметра
-                            }
+    # def apply_styles(self, start_row, end_row, start_col, end_col, bold=False):
+    #     color = {'red': 0.85, 'green': 0.93, 'blue': 0.98}
+    #     requests = [
+    #         {
+    #             'repeatCell': {
+    #                 'range': {
+    #                     'sheetId': self.sheet_id,
+    #                     'startRowIndex': start_row - 1,
+    #                     'endRowIndex': end_row,
+    #                     'startColumnIndex': start_col,
+    #                     'endColumnIndex': end_col
+    #                 },
+    #                 'cell': {
+    #                     'userEnteredFormat': {
+    #                         'backgroundColor': color,
+    #                         'textFormat': {
+    #                             'bold': bold  # Добавляем жирность в зависимости от параметра
+    #                         }
+    #                     }
+    #                 },
+    #                 'fields': 'userEnteredFormat(backgroundColor,textFormat.bold)'  # Обновляем оба поля
+    #             }
+    #         },
+    #         {
+    #             'updateBorders': {
+    #                 'range': {
+    #                     'sheetId': self.sheet_id,
+    #                     'startRowIndex': start_row - 1,
+    #                     'endRowIndex': end_row,
+    #                     'startColumnIndex': start_col,
+    #                     'endColumnIndex': end_col
+    #                 },
+    #                 'top': {'style': 'SOLID', 'width': 1},
+    #                 'bottom': {'style': 'SOLID', 'width': 1},
+    #                 'left': {'style': 'SOLID', 'width': 1},
+    #                 'right': {'style': 'SOLID', 'width': 1},
+    #                 'innerHorizontal': {'style': 'SOLID', 'width': 1},
+    #                 'innerVertical': {'style': 'SOLID', 'width': 1}
+    #             }
+    #         }
+    #     ]
+    #
+    #     self.service.spreadsheets().batchUpdate(
+    #         spreadsheetId=self.spreadsheet_id,
+    #         body={'requests': requests}
+    #     ).execute()
+
+    def apply_styles(self, start_row, end_row, start_col, end_col, bold=False, borders=True, color=None):
+        if not color:
+            color = {'red': 0.85, 'green': 0.93, 'blue': 0.98}
+        requests = []
+
+        # Стиль ячеек (фон + жирность)
+        requests.append({
+            'repeatCell': {
+                'range': {
+                    'sheetId': self.sheet_id,
+                    'startRowIndex': start_row - 1,
+                    'endRowIndex': end_row,
+                    'startColumnIndex': start_col,
+                    'endColumnIndex': end_col
+                },
+                'cell': {
+                    'userEnteredFormat': {
+                        'backgroundColor': color,
+                        'textFormat': {
+                            'bold': bold
                         }
-                    },
-                    'fields': 'userEnteredFormat(backgroundColor,textFormat.bold)'  # Обновляем оба поля
-                }
-            },
-            {
+                    }
+                },
+                'fields': 'userEnteredFormat(backgroundColor,textFormat.bold)'
+            }
+        })
+
+        # Границы, если включены
+        if borders:
+            requests.append({
                 'updateBorders': {
                     'range': {
                         'sheetId': self.sheet_id,
@@ -151,8 +206,7 @@ class BaseTable:
                     'innerHorizontal': {'style': 'SOLID', 'width': 1},
                     'innerVertical': {'style': 'SOLID', 'width': 1}
                 }
-            }
-        ]
+            })
 
         self.service.spreadsheets().batchUpdate(
             spreadsheetId=self.spreadsheet_id,
@@ -167,3 +221,55 @@ class BaseTable:
             body=body,
             valueInputOption='USER_ENTERED'
         ).execute()
+
+    def clear_sheet(self):
+        """Очищает содержимое и форматирование листа."""
+        try:
+            requests = [
+                {
+                    "updateCells": {
+                        "range": {
+                            "sheetId": self.sheet_id
+                        },
+                        "fields": "userEnteredValue,userEnteredFormat"
+                    }
+                }
+            ]
+            self.service.spreadsheets().batchUpdate(
+                spreadsheetId=self.spreadsheet_id,
+                body={"requests": requests}
+            ).execute()
+            logger.info(f"✅ Лист '{self.sheet_name}' очищен.")
+        except Exception as e:
+            logger.error(f"Ошибка при очистке листа: {e}")
+
+    def merge_cells(self, ranges: list[tuple[int, int, int, int]]):
+        """
+        Объединяет список ячеек. Каждый элемент — это кортеж (start_row, end_row, start_col, end_col)
+        """
+        try:
+            requests = [
+                {
+                    "mergeCells": {
+                        "range": {
+                            "sheetId": self.sheet_id,
+                            "startRowIndex": start_row - 1,
+                            "endRowIndex": end_row,
+                            "startColumnIndex": start_col - 1,
+                            "endColumnIndex": end_col
+                        },
+                        "mergeType": "MERGE_ALL"
+                    }
+                }
+                for start_row, end_row, start_col, end_col in ranges
+            ]
+
+            self.service.spreadsheets().batchUpdate(
+                spreadsheetId=self.spreadsheet_id,
+                body={"requests": requests}
+            ).execute()
+            logger.info(f"✅ Объединено {len(requests)} диапазонов ячеек")
+        except Exception as e:
+            logger.error(f"Ошибка при объединении ячеек: {e}")
+
+

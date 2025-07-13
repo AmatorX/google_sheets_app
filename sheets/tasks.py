@@ -11,14 +11,14 @@ import logging
 from celery import shared_task
 
 from sheets.all_workers_kpi_shhet import WorkersKPIMasterTable
+from sheets.general_statistics_sheet import GeneralStatisticTable
 from sheets.object_kpi_sheet import ObjectKPITable
 from sheets.photos_sheet import PhotosTable
 from sheets.results_sheet import ResultsTable
 from sheets.sheet1 import Sheet1Table
 from sheets.users_kpi_sheet import UsersKPITable
 from sheets.work_time_sheet import WorkTimeTable
-from tsa_app.models import BuildObject, MonthlyKPIData, ForemanAndWorkersKPISheet, WorkEntry, Material
-
+from tsa_app.models import BuildObject, MonthlyKPIData, ForemanAndWorkersKPISheet, WorkEntry, Material, GeneralStatisticSheet
 
 logger = logging.getLogger(__name__)
 
@@ -337,3 +337,16 @@ def get_worker_materials_hourly_earnings(month=None, year=None):
         name: round(data['price'] / data['hours'], 2) if data['hours'] else 0.0
         for name, data in worker_data.items()
     }
+
+
+@shared_task
+def update_general_statistic_task():
+    try:
+        summary = GeneralStatisticSheet.objects.get()
+    except GeneralStatisticSheet.DoesNotExist:
+        logger.error("Не найден объект GeneralStatistic. Создай его через админку.")
+        return
+
+    table = GeneralStatisticTable(summary)
+    table.ensure_sheet_exists()
+    table.write_full_statistic()

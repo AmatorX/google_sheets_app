@@ -9,7 +9,7 @@ from sheets.photos_sheet import PhotosTable
 from sheets.sheet1 import Sheet1Table
 from sheets.work_time_sheet import WorkTimeTable
 from .form import MonthYearForm
-from .models import Worker, BuildObject, Material, Tool, ToolsSheet, WorkEntry, BuildBudgetHistory, ForemanAndWorkersKPISheet, MediaProxy
+from .models import Worker, BuildObject, Material, Tool, ToolsSheet, WorkEntry, BuildBudgetHistory, ForemanAndWorkersKPISheet, MediaProxy, GeneralStatisticSheet
 from django.contrib.admin import SimpleListFilter
 from django.contrib import admin
 
@@ -265,7 +265,12 @@ class ForemanAndWorkersKPIAdmin(admin.ModelAdmin):
     search_fields = ('name',)
 
 
+class GeneralStatisticAdmin(admin.ModelAdmin):
+    list_display = ("sheet_name", "sh_url")
+
+
 admin.site.site_header = "TSA"
+admin.site.register(GeneralStatisticSheet, GeneralStatisticAdmin)
 admin.site.register(MediaProxy, MediaBrowserAdmin)
 admin.site.register(ForemanAndWorkersKPISheet, ForemanAndWorkersKPIAdmin)
 admin.site.register(Worker, WorkerAdmin)

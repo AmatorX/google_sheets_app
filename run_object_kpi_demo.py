@@ -5,7 +5,7 @@ import django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tsa.settings")
 django.setup()
 
-from buildings.models import BuildObject
+from tsa_app.models import BuildObject
 from sheets.object_kpi_sheet import ObjectKPITable
 
 def main():
