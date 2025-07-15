@@ -141,7 +141,6 @@ class GeneralStatisticTable(BaseTable):
                 end_col=len(all_rows[0]),
                 bold=True,
                 borders=False,
-                color={'red': 0.68, 'green': 0.744, 'blue': 0.784},
             )
             sleep(1.1)
 
@@ -179,7 +178,6 @@ class GeneralStatisticTable(BaseTable):
             end_col=len(header),
             bold=True,
             borders=True,
-            color={'red': 0.68, 'green': 0.744, 'blue': 0.784},
         )
 
         return start_row + len(rows)

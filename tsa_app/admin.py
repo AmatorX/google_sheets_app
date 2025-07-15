@@ -5,8 +5,11 @@ from datetime import date
 from django.contrib import admin, messages
 from django.shortcuts import redirect, render
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
+
 from sheets.photos_sheet import PhotosTable
 from sheets.sheet1 import Sheet1Table
+from sheets.tasks import update_general_statistic_task
+from sheets.tools_sheet import ToolsTable
 from sheets.work_time_sheet import WorkTimeTable
 from .form import MonthYearForm
 from .models import Worker, BuildObject, Material, Tool, ToolsSheet, WorkEntry, BuildBudgetHistory, ForemanAndWorkersKPISheet, MediaProxy, GeneralStatisticSheet
@@ -139,8 +142,15 @@ class ToolAdmin(admin.ModelAdmin):
     get_build_obj_name.short_description = 'Build Object'
 
 
+@admin.action(description="Update the tools table")
+def update_tools_table_admin(modeladmin, request, queryset):
+    for obj in queryset:
+        table = ToolsTable(obj)
+        table.update_tools_table()
+
 class ToolsSheetAdmin(admin.ModelAdmin):
     fields = ('name', 'sh_url')
+    actions = [update_tools_table_admin]
 
 
 
@@ -264,9 +274,16 @@ class ForemanAndWorkersKPIAdmin(admin.ModelAdmin):
     list_display = ('name', 'sh_url', 'created_at')
     search_fields = ('name',)
 
+@admin.action(description="Update the data of the general statistics tables")
+def run_update_general_statistic(modeladmin, request, queryset):
+    # Стартуем задачу Celery (один раз, неважно сколько объектов выделено)
+    update_general_statistic_task.delay()
+    # Выводим сообщение в интерфейсе админки
+    messages.success(request, "The task for updating the general statistics has been sent to work.\nThe data will be recorded in a few minutes.")
 
 class GeneralStatisticAdmin(admin.ModelAdmin):
     list_display = ("sheet_name", "sh_url")
+    actions = [run_update_general_statistic]
 
 
 admin.site.site_header = "TSA"

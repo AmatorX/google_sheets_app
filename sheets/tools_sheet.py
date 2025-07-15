@@ -36,11 +36,12 @@ class ToolsTable(BaseTable):
         """
         return [self.header] + self.get_tools_data()
 
-    def create_or_update_sheet(self):
+    def update_tools_table(self):
         """
         Создаёт или обновляет таблицу инструментов на листе и применяет стили.
         """
         self.ensure_sheet_exists()
+        self.clear_sheet()
         values = self.build_table()
 
         # Подготовка тела запроса на запись данных
@@ -64,5 +65,6 @@ class ToolsTable(BaseTable):
                 start_row=1,
                 end_row=total_rows,
                 start_col=0,
-                end_col=total_cols
+                end_col=total_cols,
+                bold=True,
             )
