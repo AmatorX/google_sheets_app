@@ -215,11 +215,12 @@ class BaseTable:
 
     def update_data(self, range_name, values):
         body = {'values': values}
+        print(f"Функция обновления данных update_data получила данные -> {body}")
         self.service.spreadsheets().values().update(
             spreadsheetId=self.spreadsheet_id,
             range=f"{self.sheet_name}!{range_name}",
             body=body,
-            valueInputOption='USER_ENTERED'
+            valueInputOption='RAW'
         ).execute()
 
     def clear_sheet(self):
@@ -271,5 +272,3 @@ class BaseTable:
             logger.info(f"✅ Объединено {len(requests)} диапазонов ячеек")
         except Exception as e:
             logger.error(f"Ошибка при объединении ячеек: {e}")
-
-
