@@ -213,14 +213,34 @@ class BaseTable:
             body={'requests': requests}
         ).execute()
 
-    def update_data(self, range_name, values):
+    # def update_data(self, range_name, values, have_formulas=False):
+    #     body = {'values': values}
+    #     if have_formulas:
+    #         self.service.spreadsheets().values().update(
+    #             spreadsheetId=self.spreadsheet_id,
+    #             range=f"{self.sheet_name}!{range_name}",
+    #             body=body,
+    #             valueInputOption='USER_ENTERED'
+    #         ).execute()
+    #     else:
+    #         self.service.spreadsheets().values().update(
+    #             spreadsheetId=self.spreadsheet_id,
+    #             range=f"{self.sheet_name}!{range_name}",
+    #             body=body,
+    #             valueInputOption='RAW'
+    #         ).execute()
+
+    def update_data(self, range_name, values, have_formulas=False):
         body = {'values': values}
-        print(f"Функция обновления данных update_data получила данные -> {body}")
+        value_input_option = 'USER_ENTERED' if have_formulas else 'RAW'
+
+        print(f"update_data -> {value_input_option} -> {body}")
+
         self.service.spreadsheets().values().update(
             spreadsheetId=self.spreadsheet_id,
             range=f"{self.sheet_name}!{range_name}",
             body=body,
-            valueInputOption='RAW'
+            valueInputOption=value_input_option
         ).execute()
 
     def clear_sheet(self):

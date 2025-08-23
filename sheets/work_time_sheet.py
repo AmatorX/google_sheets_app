@@ -40,7 +40,7 @@ class WorkTimeTable(BaseTable):
         values.append(["", "Total"] + [""] * num_days + [total_sum_formula, salary_sum_formula])
 
         # Запись
-        self.update_data(f"A{start_row}", values)
+        self.update_data(f"A{start_row}", values, have_formulas=True)
         logger.info(f"Таблица 'Work Time' обновлена: {len(rows)} работников, строки {start_row}-{row_index}")
 
         # Стили
