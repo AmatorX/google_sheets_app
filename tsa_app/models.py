@@ -10,6 +10,14 @@ from django.utils import timezone
 def get_today_date():
     return timezone.now().date()
 
+
+class WorkSpecialization(models.Model):
+    name = models.CharField("Name Specialization", max_length=255)
+
+    def __str__(self):
+        return self.name
+
+
 class Worker(models.Model):
     CHOICES = [
         ('YES', 'Yes'),
@@ -32,7 +40,7 @@ class Worker(models.Model):
     start_to_work = models.DateField(null=True, blank=True)
     title = models.CharField(max_length=255, null=True, blank=True)
     salary = models.FloatField(null=True, blank=True)
-    # salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    work_specialization = models.ForeignKey("WorkSpecialization", on_delete=models.SET_NULL, related_name="workers", null=True, blank=True)
     payroll_eligible = models.DateField(null=True, blank=True)
     payroll = models.CharField(max_length=3, choices=EMPLOYMENT_AGREEMENT_CHOICES, default='NA')
     resign_agreement = models.DateField(null=True, blank=True)
@@ -44,6 +52,7 @@ class Worker(models.Model):
     address = models.CharField(max_length=255, null=True, blank=True)
     phone_number = models.CharField(max_length=35, null=True, blank=True)
     tickets_available = models.CharField(max_length=255, null=True, blank=True)
+    is_archived = models.BooleanField(default=False)
 
     # сохранения оригинального значения build_obj_id до сохранения объекта в базе данных
     # необходимо для провеки изменения связи воркера с объектом стройки в сигналах
@@ -132,8 +141,8 @@ class Tool(models.Model):
 
 
 class WorkEntry(models.Model):
-    worker = models.ForeignKey('Worker', on_delete=models.CASCADE, related_name='work_entries')
-    build_object = models.ForeignKey('BuildObject', on_delete=models.CASCADE, related_name='work_entries')
+    worker = models.ForeignKey('Worker', on_delete=models.SET_NULL, null=True, related_name='work_entries')
+    build_object = models.ForeignKey('BuildObject', on_delete=models.SET_NULL, null=True, related_name='work_entries')
     worked_hours = models.DecimalField(max_digits=5, decimal_places=2)  # Для хранения отработанных часов
     materials_used = models.TextField()  # Сохраняем данные в формате JSON как текст
     date = models.DateField(default=get_today_date)  # Дата, когда запись была создана
@@ -208,4 +217,5 @@ class MediaProxy(Worker):
         proxy = True
         verbose_name = "📁 Photo files"
         verbose_name_plural = "📁 Photo files"
+
 

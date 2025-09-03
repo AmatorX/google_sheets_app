@@ -12,7 +12,7 @@ from sheets.tasks import update_general_statistic_task
 from sheets.tools_sheet import ToolsTable
 from sheets.work_time_sheet import WorkTimeTable
 from .form import MonthYearForm
-from .models import Worker, BuildObject, Material, Tool, ToolsSheet, WorkEntry, BuildBudgetHistory, ForemanAndWorkersKPISheet, MediaProxy, GeneralStatisticSheet
+from .models import Worker, BuildObject, Material, Tool, ToolsSheet, WorkEntry, BuildBudgetHistory, ForemanAndWorkersKPISheet, MediaProxy, GeneralStatisticSheet, WorkSpecialization
 from django.contrib.admin import SimpleListFilter
 from django.contrib import admin
 
@@ -82,30 +82,61 @@ class WorkEntryAdmin(admin.ModelAdmin):
             return 'Ошибка разбора'
     short_materials.short_description = 'Materials'
 
+
+class ArchiveFilter(admin.SimpleListFilter):
+    title = 'archive'
+    parameter_name = 'is_archived'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('no', 'Not archive'),
+            ('yes', 'Archive'),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value() == 'no':
+            return queryset.filter(is_archived=False)
+        elif self.value() == 'yes':
+            return queryset.filter(is_archived=True)
+        return queryset  # "all"
+
+
 class WorkerAdmin(admin.ModelAdmin):
-    list_display = ('name', 'tg_id', 'build_obj', 'salary', 'title', 'foreman')
+    list_display = (
+        'is_archived', 'name', 'tg_id', 'build_obj', 'salary', 'work_specialization', 'foreman'
+    )
     list_display_links = ('name',)
-    list_filter = ('build_obj', 'salary', 'title')
-    search_fields = ('name', 'tg_id', 'build_obj')
-    list_editable = ('build_obj',)
+    list_filter = (ArchiveFilter, 'work_specialization', 'build_obj')
+    search_fields = ('name', 'tg_id', 'build_obj__name')
+    list_editable = ('build_obj', 'work_specialization', 'is_archived')
     fieldsets = (
         (None, {
-            'fields': ('name', 'tg_id', 'salary', 'foreman', 'build_obj', 'phone_number', 'email')
+            'fields': (
+                'name', 'tg_id', 'salary', 'work_specialization',
+                'foreman', 'build_obj', 'phone_number', 'email',
+                'is_archived'
+            )
         }),
         ('Advanced options', {
             'classes': ('collapse',),
-            'fields': ('employment_agreement', 'over_time', 'start_to_work', 'title', 'payroll_eligible', 'payroll', 'resign_agreement', 'benefits_eligible', 'birthday', 'issued', 'expiry', 'address', 'tickets_available'),
+            'fields': (
+                'employment_agreement', 'over_time', 'start_to_work', 'title',
+                'payroll_eligible', 'payroll', 'resign_agreement',
+                'benefits_eligible', 'birthday', 'issued', 'expiry',
+                'address', 'tickets_available'
+            ),
         }),
     )
     list_per_page = 20
 
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-        if not change:  # Проверяем, что объект был создан, а не обновлен
-            pass
-            # append_user_names_to_tables(obj)  # функция для записи данных
-            # Отображаем сообщение в админке
-            # messages.success(request, 'Данные записаны успешно!')
+
+    def get_actions(self, request):
+        """Убираем стандартное удаление, если хочешь запрещать реальное удаление."""
+        actions = super().get_actions(request)
+        if "delete_selected" in actions:
+            del actions["delete_selected"]
+        return actions
+
 
 
 class MaterialAdmin(admin.ModelAdmin):
@@ -286,7 +317,12 @@ class GeneralStatisticAdmin(admin.ModelAdmin):
     actions = [run_update_general_statistic]
 
 
+class WorkSpecializationAdmin(admin.ModelAdmin):
+    list_display = ["name"]
+
+
 admin.site.site_header = "TSA"
+admin.site.register(WorkSpecialization, WorkSpecializationAdmin)
 admin.site.register(GeneralStatisticSheet, GeneralStatisticAdmin)
 admin.site.register(MediaProxy, MediaBrowserAdmin)
 admin.site.register(ForemanAndWorkersKPISheet, ForemanAndWorkersKPIAdmin)
