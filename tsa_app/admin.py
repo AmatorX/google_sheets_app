@@ -89,16 +89,15 @@ class ArchiveFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin):
         return [
-            ('no', 'Not archive'),
             ('yes', 'Archive'),
         ]
 
     def queryset(self, request, queryset):
-        if self.value() == 'no':
-            return queryset.filter(is_archived=False)
-        elif self.value() == 'yes':
+        if self.value() == 'yes':
             return queryset.filter(is_archived=True)
-        return queryset  # "all"
+        # "All" (стандартный пункт Django) → показываем активных
+        return queryset.filter(is_archived=False)
+
 
 
 class WorkerAdmin(admin.ModelAdmin):
@@ -281,10 +280,10 @@ def run_monthly_summary_tasks(modeladmin, request, queryset, month, year):
 
 class BuildObjectAdmin(admin.ModelAdmin):
     actions = [update_all_worktime_tables, write_materials_summary_action, write_users_kpi_data, record_summary_data, update_photos_tables, run_monthly_summary_tasks]
-    fields = ('name', 'total_budget', 'material', 'current_budget', 'sh_url', 'archive')
-    list_display = ('name', 'archive', 'total_budget', 'current_budget', 'display_materials')
-    list_filter = ['archive']
-    list_editable = ('archive',)
+    fields = ('is_archived', 'name', 'total_budget', 'material', 'current_budget', 'sh_url')
+    list_display = ('name', 'is_archived', 'total_budget', 'current_budget', 'display_materials')
+    list_filter = (ArchiveFilter,)
+    list_editable = ('is_archived',)
 
     def display_materials(self, obj):
         return ", ".join([material.name for material in obj.material.all()])
