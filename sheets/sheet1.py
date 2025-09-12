@@ -8,9 +8,10 @@ from tsa_app.models import WorkEntry, Material
 
 
 class Sheet1Table(BaseTable):
-    def __init__(self, obj):
+    def __init__(self, obj, work_spec=None):
         self.obj = obj
         self.sh_url = obj.sh_url
+        self.work_spec = work_spec
         super().__init__(obj=obj, sheet_name="Sheet1")
 
     def get_worker_month_salary(self, worker, month=None, year=None):
@@ -122,6 +123,61 @@ class Sheet1Table(BaseTable):
             ]
         return None
 
+    # def get_summary_rows(self, month=None, year=None):
+    #     work_spec = self.work_spec
+    #     print("Запуск get_summary_rows")
+    #     print(f"Передан {work_spec=}, type: {type(work_spec)}")
+    #     print(f"get_summary_rows work_spec id: {id(work_spec)}")
+    #     today = date.today()
+    #     if month is None: month = today.month
+    #     if year is None: year = today.year
+    #
+    #     month_year = date(year, month, 1).strftime("%B %Y")
+    #
+    #     entries = WorkEntry.objects.filter(
+    #         build_object=self.obj,
+    #         date__year=year,
+    #         date__month=month
+    #     )
+    #     print(f"get_summary_rows получены entries: {entries}")
+    #
+    #     if work_spec:
+    #         entries = entries.filter(worker__work_specialization=work_spec)
+    #         print(f"После фильтрации по спецификации entries: {entries}")
+    #
+    #     if not entries.exists():
+    #         return None
+    #
+    #     total_hours = 0
+    #     total_earned = 0
+    #     print(f"<<<<<< entries {entries} >>>>>>")
+    #     for entry in entries:
+    #         print(f"Работа: {entry.worker.name}, часы: {entry.worked_hours}, материалы_raw: {entry.materials_used}")
+    #         hours = entry.get_worked_hours_as_float()
+    #         salary = entry.worker.salary or 0
+    #
+    #         total_hours += hours
+    #         total_earned_entry = 0
+    #
+    #         materials = entry.get_materials_used()
+    #         for _, material_info in materials.items():
+    #             total_earned_entry += material_info["quantity"] * material_info["unit_price"]
+    #
+    #         total_earned += total_earned_entry
+    #
+    #     total_salary = sum(entry.get_worked_hours_as_float() * (entry.worker.salary or 0) for entry in entries)
+    #     result = total_earned - total_salary
+    #     budget = self.obj.total_budget
+    #     progress = f"{round((total_earned / budget * 100), 2) if budget else 0}%"
+    #     return [
+    #         [month_year],
+    #         ['Bldg cost', budget],
+    #         ['Salary', round(total_salary, 2)],
+    #         ['Earned', round(total_earned, 2)],
+    #         ['Result', round(result, 2)],
+    #         ['Progress', progress]
+    #     ]
+
     def write_summary(self, month=None, year=None):
         """
         Записывает строки общей статистики в таблицу (две пустые строки + блок).
@@ -132,6 +188,7 @@ class Sheet1Table(BaseTable):
         start_row = self.get_last_non_empty_row(column_letter='B') + 1
         empty_rows = [[' '], [' ']]
         summary_rows = self.get_summary_rows(month, year)
+        print(f"Функция write_summary для записи переданы данные: {summary_rows}")
         if summary_rows:
             all_rows = empty_rows + summary_rows
             print(f"write_summary {self.obj.name}: {all_rows} -----")
@@ -190,6 +247,7 @@ class Sheet1Table(BaseTable):
         self.remove_existing_month_data_if_exists(month, year)
         start_row = self.get_last_non_empty_row(column_letter='B') + 1
         rows = self.get_workers_summary_rows(month, year)
+        print(f"Функция write_summary_workers для записи в таблицу пользователей переданы данные: {rows}")
         if rows:
             self.update_data(f"A{start_row}", rows)
             sleep(2)
@@ -259,9 +317,34 @@ class Sheet1Table(BaseTable):
 
         print(f"Сводка по материалам записана начиная с {cell}")
 
+    # def get_total_salary(self, month=None, year=None):
+    #     """
+    #     Возвращает общую зарплату по WorkEntry текущего объекта за месяц.
+    #
+    #     :param month: Месяц.
+    #     :param year: Год.
+    #     :return: Общая сумма зарплат.
+    #     """
+    #     today = date.today()
+    #     if month is None: month = today.month
+    #     if year is None: year = today.year
+    #     first_day = date(year, month, 1)
+    #     last_day = date(year, month, monthrange(year, month)[1])
+    #     entries = WorkEntry.objects.filter(
+    #         build_object=self.obj,
+    #         date__range=(first_day, last_day)
+    #     ).select_related('worker')
+    #
+    #     total = 0.0
+    #     for entry in entries:
+    #         rate = entry.worker.salary or 0
+    #         hours = entry.get_worked_hours_as_float()
+    #         total += rate * hours
+    #     return round(total, 2)
+
     def get_total_salary(self, month=None, year=None):
         """
-        Возвращает общую зарплату по WorkEntry текущего объекта за месяц.
+        Возвращает общую зарплату по WorkEntry текущего объекта за месяц с учётом work_spec.
 
         :param month: Месяц.
         :param year: Год.
@@ -270,23 +353,64 @@ class Sheet1Table(BaseTable):
         today = date.today()
         if month is None: month = today.month
         if year is None: year = today.year
+
         first_day = date(year, month, 1)
         last_day = date(year, month, monthrange(year, month)[1])
+
         entries = WorkEntry.objects.filter(
             build_object=self.obj,
             date__range=(first_day, last_day)
         ).select_related('worker')
 
+        if self.work_spec:
+            entries = entries.filter(worker__work_specialization=self.work_spec)
+
         total = 0.0
         for entry in entries:
+            if not entry.worker:
+                continue  # пропускаем, если worker удалён
             rate = entry.worker.salary or 0
             hours = entry.get_worked_hours_as_float()
             total += rate * hours
+
         return round(total, 2)
+
+    # def get_total_materials_income(self, month=None, year=None):
+    #     """
+    #     Возвращает доход от установки материалов по WorkEntry объекта за месяц.
+    #
+    #     :param month: Месяц.
+    #     :param year: Год.
+    #     :return: Общий доход.
+    #     """
+    #     today = date.today()
+    #     if month is None: month = today.month
+    #     if year is None: year = today.year
+    #     first_day = date(year, month, 1)
+    #     last_day = date(year, month, monthrange(year, month)[1])
+    #
+    #     entries = WorkEntry.objects.filter(
+    #         build_object=self.obj,
+    #         date__range=(first_day, last_day)
+    #     )
+    #
+    #     total = 0.0
+    #     cache = {}
+    #     for entry in entries:
+    #         for name, qty in entry.get_materials_used().items():
+    #             try:
+    #                 qty = float(qty)
+    #             except Exception:
+    #                 qty = 0
+    #             if name not in cache:
+    #                 material = Material.objects.filter(name__iexact=name).first()
+    #                 cache[name] = material.price if material and material.price else 0
+    #             total += cache[name] * qty
+    #     return round(total, 2)
 
     def get_total_materials_income(self, month=None, year=None):
         """
-        Возвращает доход от установки материалов по WorkEntry объекта за месяц.
+        Возвращает доход от установки материалов по WorkEntry объекта за месяц с учётом work_spec.
 
         :param month: Месяц.
         :param year: Год.
@@ -295,18 +419,23 @@ class Sheet1Table(BaseTable):
         today = date.today()
         if month is None: month = today.month
         if year is None: year = today.year
+
         first_day = date(year, month, 1)
         last_day = date(year, month, monthrange(year, month)[1])
 
         entries = WorkEntry.objects.filter(
             build_object=self.obj,
             date__range=(first_day, last_day)
-        )
+        ).select_related('worker')
+
+        if self.work_spec:
+            entries = entries.filter(worker__work_specialization=self.work_spec)
 
         total = 0.0
         cache = {}
         for entry in entries:
-            for name, qty in entry.get_materials_used().items():
+            materials = entry.get_materials_used()
+            for name, qty in materials.items():
                 try:
                     qty = float(qty)
                 except Exception:
@@ -315,6 +444,7 @@ class Sheet1Table(BaseTable):
                     material = Material.objects.filter(name__iexact=name).first()
                     cache[name] = material.price if material and material.price else 0
                 total += cache[name] * qty
+
         return round(total, 2)
 
     def remove_existing_month_data_if_exists(self, month=None, year=None):
@@ -366,4 +496,18 @@ class Sheet1Table(BaseTable):
                 }]
             }
         ).execute()
-
+        self.service.spreadsheets().batchUpdate(
+            spreadsheetId=self.spreadsheet_id,
+            body={
+                "requests": [{
+                    "insertDimension": {
+                        "range": {
+                            "sheetId": self.sheet_id,
+                            "dimension": "ROWS",
+                            "startIndex": delete_start,
+                            "endIndex": delete_end + 1
+                        }
+                    }
+                }]
+            }
+        ).execute()
