@@ -18,7 +18,8 @@ from sheets.results_sheet import ResultsTable
 from sheets.sheet1 import Sheet1Table
 from sheets.users_kpi_sheet import UsersKPITable
 from sheets.work_time_sheet import WorkTimeTable
-from tsa_app.models import BuildObject, MonthlyKPIData, ForemanAndWorkersKPISheet, WorkEntry, Material, GeneralStatisticSheet
+from tsa_app.models import BuildObject, MonthlyKPIData, ForemanAndWorkersKPISheet, WorkEntry, Material, \
+    GeneralStatisticSheet, WorkSpecialization
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +140,8 @@ def process_daily_kpi_data_for_tgbot():
             data = table.get_today_per_day_dict()
             result_data.update(data)
         except Exception as e:
-            result_data[f"error_{obj.id}"] = str(e)
+            logger.error(f"Error processing BuildObject {obj.id} ({obj.name}): {e}", exc_info=True)
+            continue
 
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(result_data, f, ensure_ascii=False, indent=2)
@@ -346,7 +348,11 @@ def update_general_statistic_task():
     except GeneralStatisticSheet.DoesNotExist:
         logger.error("Не найден объект GeneralStatistic. Создай его через админку.")
         return
-
+    work_specializations = WorkSpecialization.objects.all()
+    for work_spec in work_specializations:
+        table = GeneralStatisticTable(summary, work_spec)
+        table.ensure_sheet_exists()
+        table.write_full_statistic()
     table = GeneralStatisticTable(summary)
     table.ensure_sheet_exists()
     table.write_full_statistic()
