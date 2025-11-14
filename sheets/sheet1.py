@@ -78,6 +78,7 @@ class Sheet1Table(BaseTable):
             for name, qty in materials.items():
                 try:
                     material = Material.objects.get(name=name)
+                    print(f"Material -> {material.name}")
                     earned += float(qty) * (material.price or 0)
                 except Material.DoesNotExist:
                     continue
