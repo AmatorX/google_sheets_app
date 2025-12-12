@@ -224,6 +224,9 @@ class Sheet1Table(BaseTable):
 
         worker_hours = defaultdict(float)
         for entry in entries:
+            if not entry.worker:
+                print(f"[WARN] WorkEntry(id={entry.id}) пропущен: worker=None")
+                continue
             worker_hours[entry.worker] += float(entry.worked_hours)
 
         rows = []
