@@ -350,12 +350,12 @@ def write_kpi_data_to_master_table(data_dict: dict, month=None):
 #         raise
 
 
-
-
-def get_worker_materials_hourly_earnings(month=None, year=None):
+def get_worker_materials_hourly_earnings(month: int | None = None, year: int | None = None) -> dict:
     """
-    Возвращает словарь {worker_name: заработок в час за установленные материалы} за указанный месяц.
-    Если month=None, берёт текущий месяц и год.
+    Возвращает словарь {worker_name: заработок в час за установленные материалы}
+    за указанный месяц и год.
+
+    Если month или year не указаны — используется текущий месяц и год.
     """
 
     today = date.today()
@@ -365,38 +365,43 @@ def get_worker_materials_hourly_earnings(month=None, year=None):
     start_date = date(year, month, 1)
     end_date = date(year, month, monthrange(year, month)[1])
 
-    entries = WorkEntry.objects.filter(date__range=(start_date, end_date))
+    # Получаем рабочие записи за период только для неархивных работников
+    entries = (
+        WorkEntry.objects
+        .select_related('worker')
+        .filter(
+            date__range=(start_date, end_date),
+            worker__is_archived=False,
+        )
+    )
 
+    # Цены материалов {material_name: price}
     material_prices = {
-        m.name: m.price for m in Material.objects.all() if m.price is not None
+        material.name: material.price
+        for material in Material.objects.filter(price__isnull=False)
     }
 
-    worker_data = defaultdict(lambda: {'price': 0.0, 'hours': 0.0})
+    worker_totals = defaultdict(lambda: {'total_price': 0.0, 'total_hours': 0.0})
 
     for entry in entries:
-        if entry.worker:
-            name = entry.worker.name
-            hours = entry.get_worked_hours_as_float()
-            materials = entry.get_materials_used()
+        worker_name = entry.worker.name
+        worked_hours = entry.get_worked_hours_as_float()
+        materials_used = entry.get_materials_used()
 
-            cost = sum(
-                float(material_prices.get(mat, 0)) * float(qty)
-                for mat, qty in materials.items()
-            )
+        materials_cost = sum(
+            float(material_prices.get(material_name, 0)) * float(quantity)
+            for material_name, quantity in materials_used.items()
+        )
+        worker_totals[worker_name]['total_price'] += materials_cost
+        worker_totals[worker_name]['total_hours'] += worked_hours
 
-            worker_data[name]['price'] += cost
-            worker_data[name]['hours'] += hours
-
-    workers_in_entries = (
-        entries
-        .values_list('worker__name', flat=True)
-        .distinct()
-    )
-    result = {
-        name: round(data['price'] / data['hours'], 2) if data['hours'] else 0.0
-        for name, data in worker_data.items()
+    # Итог: заработок в час
+    return {
+        worker_name: round(
+            data['total_price'] / data['total_hours'], 2
+        ) if data['total_hours'] else 0.0
+        for worker_name, data in worker_totals.items()
     }
-    return result
 
 
 @shared_task
