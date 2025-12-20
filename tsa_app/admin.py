@@ -8,7 +8,7 @@ from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 
 from sheets.photos_sheet import PhotosTable
 from sheets.sheet1 import Sheet1Table
-from sheets.tasks import update_general_statistic_task
+from sheets.tasks import update_general_statistic_task, update_foremans_and_workers_kpi
 from sheets.tools_sheet import ToolsTable
 from sheets.work_time_sheet import WorkTimeTable
 from .form import MonthYearForm
@@ -257,7 +257,7 @@ def update_photos_tables(modeladmin, request, queryset):
 
 @admin.action(description="Update the result tables for sheet1")
 @with_month_year_form()
-def run_monthly_summary_tasks(modeladmin, request, queryset, month, year):
+def run_monthly_summary(modeladmin, request, queryset, month, year):
     all_workers_data = []
     for obj in queryset:
         print(obj.name, month, year)
@@ -279,7 +279,7 @@ def run_monthly_summary_tasks(modeladmin, request, queryset, month, year):
 
 
 class BuildObjectAdmin(admin.ModelAdmin):
-    actions = [update_all_worktime_tables, write_materials_summary_action, write_users_kpi_data, record_summary_data, update_photos_tables, run_monthly_summary_tasks]
+    actions = [update_all_worktime_tables, write_materials_summary_action, write_users_kpi_data, record_summary_data, update_photos_tables, run_monthly_summary]
     fields = ('is_archived', 'name', 'total_budget', 'material', 'current_budget', 'sh_url')
     list_display = ('name', 'is_archived', 'total_budget', 'current_budget', 'display_materials')
     list_filter = (ArchiveFilter,)
@@ -300,9 +300,10 @@ class BuildBudgetHistoryAdmin(admin.ModelAdmin):
     date_hierarchy = 'date'  # навигация по датам сверху
     ordering = ('-date',)
 
-class ForemanAndWorkersKPIAdmin(admin.ModelAdmin):
-    list_display = ('name', 'sh_url', 'created_at')
-    search_fields = ('name',)
+
+@admin.action(description="Update foreman and workers kpi sheet statistics")
+def run_update_foreman_and_workers_kpi(modeladmin, request, queryset):
+    update_foremans_and_workers_kpi.delay()
 
 @admin.action(description="Update the data of the general statistics tables")
 def run_update_general_statistic(modeladmin, request, queryset):
@@ -314,6 +315,11 @@ def run_update_general_statistic(modeladmin, request, queryset):
 class GeneralStatisticAdmin(admin.ModelAdmin):
     list_display = ("sheet_name", "sh_url")
     actions = [run_update_general_statistic]
+
+class ForemanAndWorkersKPIAdmin(admin.ModelAdmin):
+    list_display = ('name', 'sh_url', 'created_at')
+    search_fields = ('name',)
+    actions = [run_update_foreman_and_workers_kpi]
 
 
 class WorkSpecializationAdmin(admin.ModelAdmin):

@@ -93,9 +93,27 @@ class WorkersKPIMasterTable(BaseTable):
     #
     #     logger.info(f"KPI за {month_name} записаны для {len(workers_dict)} работников.")
 
-    def write_monthly_kpi(self, workers_dict: dict[str, float]):
+    # def write_monthly_kpi(self, workers_dict: dict[str, float]):
+    #     self.ensure_sheet_exists()
+    #     month_name = datetime.now().strftime("%B")
+
+    def write_monthly_kpi(self, workers_dict: dict[str, float], month=None):
         self.ensure_sheet_exists()
-        month_name = datetime.now().strftime("%B")
+
+        if month is not None:
+            # Проверяем, что месяц в допустимом диапазоне
+            if month < 1 or month > 12:
+                raise ValueError("Номер месяца должен быть от 1 до 12")
+
+            # Формируем название месяца на английском
+            month_names = [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ]
+            month_name = month_names[month - 1]
+        else:
+            # Используем текущий месяц
+            month_name = datetime.now().strftime("%B")
 
         # Получаем все данные листа за один запрос
         try:

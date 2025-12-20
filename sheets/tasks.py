@@ -201,8 +201,6 @@ def run_monthly_summary_tasks():
     #     logger.info("Сегодня не последний день месяца по времени Калгари. Задача завершена без выполнения.")
     #     return
     # ---------------------------------------------------------
-    logger.info("Запуск записи сводных данных...")
-    # all_workers_data = []
     queryset = BuildObject.objects.all()
     if not queryset.exists():
         logger.warning("Нет объектов BuildObject для обработки")
@@ -232,6 +230,21 @@ def run_monthly_summary_tasks():
         raise
     logger.info("Задача завершена. Данные сохранены в БД и Google Sheets")
 
+
+############################################################################################################
+@shared_task
+def update_foremans_and_workers_kpi():
+    for month in range(1, 13):
+        # Формируем данные для записи
+        data_dict = get_worker_materials_hourly_earnings(month)
+        try:
+            # save_to_db_current_month_kpi(data_dict)
+            write_kpi_data_to_master_table(data_dict, month=month)
+        except Exception as e:
+            logger.error(f"Ошибка при сохранении KPI: {e}")
+            raise
+        logger.info("Задача завершена. Данные сохранены в БД и Google Sheets")
+############################################################################################################
 
 def save_to_db_current_month_kpi(data_dict):
     """
@@ -264,13 +277,10 @@ def save_to_db_current_month_kpi(data_dict):
     return obj
 
 
-def write_kpi_data_to_master_table(data_dict: dict):
+def write_kpi_data_to_master_table(data_dict: dict, month=None):
     """
     Записывает агрегированные KPI-данные работников в мастер-таблицу Google Sheets.
-    Функция выполняет следующие действия:
-    1. Получает объект ForemanAndWorkersKPISheet за текущий год из БД
-    2. Инициализирует WorkersKPIMasterTable с полученным объектом
-    3. Записывает переданные KPI-данные в соответствующую таблицу Google Sheets
+
     Параметры:
         data_dict (dict): Словарь с данными KPI в формате:
                          {
@@ -278,26 +288,67 @@ def write_kpi_data_to_master_table(data_dict: dict):
                              "Имя работника2": суммарный_заработок,
                              ...
                          }
+        month (int | None): Номер месяца (1–12). Если None — используется текущий месяц.
+
     Исключения:
         ForemanAndWorkersKPISheet.DoesNotExist: Если в базе нет записи за текущий год
         Exception: Любые другие ошибки при работе с Google Sheets API
-    Пример использования:
-        data = {"Иванов И.": 1500.50, "Петров А.": 2000.00}
-        write_kpi_data_to_master_table(data)
     """
     current_year = datetime.now().year
     try:
         # Получаем объект ForemanAndWorkersKPISheet за текущий год
         kpi_sheet_obj = ForemanAndWorkersKPISheet.objects.get(year=current_year)
+
         workers_kpi_master_table = WorkersKPIMasterTable(kpi_sheet_obj)
-        workers_kpi_master_table.write_monthly_kpi(data_dict)
+        if month == 1:
+            workers_kpi_master_table.clear_sheet()
+        workers_kpi_master_table.write_monthly_kpi(data_dict, month=month)
+
     except ForemanAndWorkersKPISheet.DoesNotExist:
         error_msg = f"Не найден объект ForemanAndWorkersKPISheet за {current_year} год."
         logger.error(error_msg)
         raise ForemanAndWorkersKPISheet.DoesNotExist(error_msg)
+
     except Exception as e:
         logger.error(f"Ошибка при записи KPI данных в мастер-таблицу: {str(e)}")
         raise
+
+
+# def write_kpi_data_to_master_table(data_dict: dict):
+#     """
+#     Записывает агрегированные KPI-данные работников в мастер-таблицу Google Sheets.
+#     Функция выполняет следующие действия:
+#     1. Получает объект ForemanAndWorkersKPISheet за текущий год из БД
+#     2. Инициализирует WorkersKPIMasterTable с полученным объектом
+#     3. Записывает переданные KPI-данные в соответствующую таблицу Google Sheets
+#     Параметры:
+#         data_dict (dict): Словарь с данными KPI в формате:
+#                          {
+#                              "Имя работника1": суммарный_заработок,
+#                              "Имя работника2": суммарный_заработок,
+#                              ...
+#                          }
+#     Исключения:
+#         ForemanAndWorkersKPISheet.DoesNotExist: Если в базе нет записи за текущий год
+#         Exception: Любые другие ошибки при работе с Google Sheets API
+#     Пример использования:
+#         data = {"Иванов И.": 1500.50, "Петров А.": 2000.00}
+#         write_kpi_data_to_master_table(data)
+#     """
+#     current_year = datetime.now().year
+#     try:
+#         # Получаем объект ForemanAndWorkersKPISheet за текущий год
+#         kpi_sheet_obj = ForemanAndWorkersKPISheet.objects.get(year=current_year)
+#         workers_kpi_master_table = WorkersKPIMasterTable(kpi_sheet_obj)
+#         workers_kpi_master_table.write_monthly_kpi(data_dict)
+#     except ForemanAndWorkersKPISheet.DoesNotExist:
+#         error_msg = f"Не найден объект ForemanAndWorkersKPISheet за {current_year} год."
+#         logger.error(error_msg)
+#         raise ForemanAndWorkersKPISheet.DoesNotExist(error_msg)
+#     except Exception as e:
+#         logger.error(f"Ошибка при записи KPI данных в мастер-таблицу: {str(e)}")
+#         raise
+
 
 
 
@@ -323,22 +374,29 @@ def get_worker_materials_hourly_earnings(month=None, year=None):
     worker_data = defaultdict(lambda: {'price': 0.0, 'hours': 0.0})
 
     for entry in entries:
-        name = entry.worker.name
-        hours = entry.get_worked_hours_as_float()
-        materials = entry.get_materials_used()
+        if entry.worker:
+            name = entry.worker.name
+            hours = entry.get_worked_hours_as_float()
+            materials = entry.get_materials_used()
 
-        cost = sum(
-            float(material_prices.get(mat, 0)) * float(qty)
-            for mat, qty in materials.items()
-        )
+            cost = sum(
+                float(material_prices.get(mat, 0)) * float(qty)
+                for mat, qty in materials.items()
+            )
 
-        worker_data[name]['price'] += cost
-        worker_data[name]['hours'] += hours
+            worker_data[name]['price'] += cost
+            worker_data[name]['hours'] += hours
 
-    return {
+    workers_in_entries = (
+        entries
+        .values_list('worker__name', flat=True)
+        .distinct()
+    )
+    result = {
         name: round(data['price'] / data['hours'], 2) if data['hours'] else 0.0
         for name, data in worker_data.items()
     }
+    return result
 
 
 @shared_task
