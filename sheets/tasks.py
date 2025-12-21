@@ -3,10 +3,7 @@ import os
 from calendar import monthrange
 from collections import defaultdict
 from datetime import datetime, date, timedelta
-from pytz import timezone
 from time import sleep
-
-import pytz
 import logging
 from celery import shared_task
 
@@ -85,7 +82,7 @@ def update_results_tables():
 
 @shared_task
 def update_daily_object_kpis():
-    build_objects = BuildObject.objects.all()
+    build_objects = BuildObject.objects.filter(is_archived=False)
 
     if not build_objects.exists():
         print("Нет доступных объектов.")
@@ -147,38 +144,6 @@ def process_daily_kpi_data_for_tgbot():
         json.dump(result_data, f, ensure_ascii=False, indent=2)
 
     return f"Готово. Данные сохранены в {filepath}"
-
-
-# def is_last_day_of_month(date_now=None):
-#     date_now = date_now or datetime.today()
-#     next_day = date_now + timedelta(days=1)
-#     return next_day.day == 1
-#
-# @shared_task
-# def run_monthly_summary_tasks():
-#     if not is_last_day_of_month():
-#         logger.info("Сегодня не последний день месяца. Задача завершена без выполнения.")
-#         return
-#
-#     logger.info("Сегодня последний день месяца. Запуск записи сводных данных...")
-#
-#     queryset = BuildObject.objects.all()
-#     for obj in queryset:
-#         try:
-#             # 1. KPI по пользователям
-#             table = Sheet1Table(obj)
-#             table.write_summary_workers()
-#             logger.info(f"Сводка результатов работников записана для '{obj.name}'")
-#
-#             # 2. Сводка по объекту
-#             table.write_summary()
-#             logger.info(f"Сводная таблица за месяц записана для '{obj.name}'")
-#
-#         except Exception as e:
-#             logger.error(f"Ошибка при обработке '{obj.name}': {e}")
-#         sleep(60)
-#
-#     logger.info("Месячная задача завершена.")
 
 
 def is_last_day_of_month(date_now=None):
@@ -312,42 +277,6 @@ def write_kpi_data_to_master_table(data_dict: dict, month=None):
     except Exception as e:
         logger.error(f"Ошибка при записи KPI данных в мастер-таблицу: {str(e)}")
         raise
-
-
-# def write_kpi_data_to_master_table(data_dict: dict):
-#     """
-#     Записывает агрегированные KPI-данные работников в мастер-таблицу Google Sheets.
-#     Функция выполняет следующие действия:
-#     1. Получает объект ForemanAndWorkersKPISheet за текущий год из БД
-#     2. Инициализирует WorkersKPIMasterTable с полученным объектом
-#     3. Записывает переданные KPI-данные в соответствующую таблицу Google Sheets
-#     Параметры:
-#         data_dict (dict): Словарь с данными KPI в формате:
-#                          {
-#                              "Имя работника1": суммарный_заработок,
-#                              "Имя работника2": суммарный_заработок,
-#                              ...
-#                          }
-#     Исключения:
-#         ForemanAndWorkersKPISheet.DoesNotExist: Если в базе нет записи за текущий год
-#         Exception: Любые другие ошибки при работе с Google Sheets API
-#     Пример использования:
-#         data = {"Иванов И.": 1500.50, "Петров А.": 2000.00}
-#         write_kpi_data_to_master_table(data)
-#     """
-#     current_year = datetime.now().year
-#     try:
-#         # Получаем объект ForemanAndWorkersKPISheet за текущий год
-#         kpi_sheet_obj = ForemanAndWorkersKPISheet.objects.get(year=current_year)
-#         workers_kpi_master_table = WorkersKPIMasterTable(kpi_sheet_obj)
-#         workers_kpi_master_table.write_monthly_kpi(data_dict)
-#     except ForemanAndWorkersKPISheet.DoesNotExist:
-#         error_msg = f"Не найден объект ForemanAndWorkersKPISheet за {current_year} год."
-#         logger.error(error_msg)
-#         raise ForemanAndWorkersKPISheet.DoesNotExist(error_msg)
-#     except Exception as e:
-#         logger.error(f"Ошибка при записи KPI данных в мастер-таблицу: {str(e)}")
-#         raise
 
 
 def get_worker_materials_hourly_earnings(month: int | None = None, year: int | None = None) -> dict:

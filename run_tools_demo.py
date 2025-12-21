@@ -22,7 +22,7 @@ if __name__ == "__main__":
             all_tools = Tool.objects.all()
 
             if all_tools.exists():
-                table.create_or_update_sheet()  # Обновление таблицы
+                table.update_tools_table()  # Обновление таблицы
             else:
                 print("Нет инструментов, связанных с этим листом.")
     except Exception as e:

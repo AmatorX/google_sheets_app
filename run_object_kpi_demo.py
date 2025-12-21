@@ -9,7 +9,8 @@ from tsa_app.models import BuildObject
 from sheets.object_kpi_sheet import ObjectKPITable
 
 def main():
-    build_objects = BuildObject.objects.all()
+    # build_objects = BuildObject.objects.all()
+    build_objects = BuildObject.objects.filter(is_archived=False)
 
     if not build_objects.exists():
         print("Нет доступных объектов.")

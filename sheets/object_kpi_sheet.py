@@ -1,7 +1,5 @@
 from datetime import date, datetime
 from decimal import Decimal
-
-
 from sheets.base_sheet import BaseTable
 from tsa_app.models import WorkEntry, Material, BuildBudgetHistory
 
@@ -27,7 +25,7 @@ class ObjectKPITable(BaseTable):
         self.sheet_range = f"{self.sheet_name}!A1"
         super().__init__(build_object, sheet_name=self.sheet_name)
 
-    def get_done_today_dollars(self):
+    def get_earnings_for_installing_materials(self):
         """
         Возвращает общую стоимость установленных материалов (в долларах) за сегодня на объекте.
         """
@@ -38,7 +36,7 @@ class ObjectKPITable(BaseTable):
             build_object=self.obj,
             date=today
         )
-        print(f"метод get_done_today_dollars entries: {entries}")
+        print(f"метод get_earnings_for_installing_materials entries: {entries}")
 
         for entry in entries:
             materials = entry.get_materials_used()
@@ -58,14 +56,6 @@ class ObjectKPITable(BaseTable):
         except Material.DoesNotExist:
             print(f"Цена для материала '{name}' не найдена, возвращаем 0")
             return 0
-
-    # def update_budget(self, done_today_dollars):
-    #     """
-    #     Обновляет бюджет, исходя из текущей стоимости работ.
-    #     """
-    #     new_budget = self.obj.current_budget - done_today_dollars
-    #     self.obj.current_budget = new_budget
-    #     self.obj.save()
 
 
     def ensure_headers(self):
@@ -98,6 +88,43 @@ class ObjectKPITable(BaseTable):
             defaults={'current_budget': new_budget}
         )
 
+    def get_total_salary_per_day(self):
+        """
+        Возвращает общую сумму зарплаты, выплаченной рабочим за сегодняшний день
+        на данном объекте строительства. Все ошибки обрабатываются.
+        """
+        from datetime import date
+        from decimal import Decimal
+
+        total_salary = Decimal('0.0')
+        today = date.today()
+
+        try:
+            # Получаем все отчёты за сегодня для объекта
+            entries = WorkEntry.objects.filter(build_object=self.obj, date=today)
+        except Exception as e:
+            print(f"Ошибка при получении записей WorkEntry: {e}")
+            return 0.0
+
+        for entry in entries:
+            try:
+                if entry.worker and entry.worker.salary is not None:
+                    hours = float(entry.worked_hours)
+                    hourly_rate = float(entry.worker.salary)
+                    total_salary += Decimal(hours * hourly_rate)
+                else:
+                    # Если нет работника или зарплаты — считаем 0
+                    continue
+            except Exception as e:
+                print(f"Ошибка при обработке записи {entry}: {e}")
+                continue
+
+        try:
+            return float(total_salary)
+        except Exception as e:
+            print(f"Ошибка при конвертации total_salary в float: {e}")
+            return 0.0
+
     def write_today_row(self):
         """
         Добавляет строку с расчётами за сегодня в таблицу и обновляет бюджет.
@@ -105,7 +132,7 @@ class ObjectKPITable(BaseTable):
         today = date.today()
         day_of_month = today.day
 
-        done_today = self.get_done_today_dollars()
+        done_today = self.get_total_salary_per_day()
         budget_before = self.obj.current_budget
         initial_budget = self.obj.total_budget
 
