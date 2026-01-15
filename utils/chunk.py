@@ -4,42 +4,69 @@ import calendar
 
 def create_chunk_data(full_list=False):
     """
-    Формируем чанк для текущей недели начиная со второго воскресенья года.
-    Если full_list=False, возвращается только текущий чанк.
+    14-дневные чанки:
+    - стандартно: воскресенье → суббота (14 дней)
+    - первый чанк может быть короче (с 1 января до первой субботы)
+    - последний чанк может быть короче (обрезается 31 декабря)
     """
-    year = datetime.datetime.now().year
-    # Получение имен месяцев и аббревиатур дней недели один раз
-    month_names = [calendar.month_name[month] for month in range(1, 13)]
+    today = datetime.date.today()
+    year = today.year
+
+    month_names = [calendar.month_name[m] for m in range(1, 13)]
     weekdays_abbr = list(calendar.day_abbr)
-    # Создание списка всех дней в году с использованием списковых включений
-    date_list = [
-        (month_names[month - 1], weekdays_abbr[calendar.weekday(year, month, day)], str(day))
-        for month in range(1, 13)
-        for day in range(1, calendar.monthrange(year, month)[1] + 1)
-    ]
 
-    # Вычисление индекса второго воскресенья
-    sundays = [i for i, (_, weekday, _) in enumerate(date_list) if weekday == 'Sun']
-    second_sunday_index = sundays[1] if len(sundays) > 1 else None
+    def format_day(date_obj):
+        return (
+            month_names[date_obj.month - 1],
+            weekdays_abbr[date_obj.weekday()],
+            str(date_obj.day),
+        )
 
-    # Создание чанков
-    chunked_date_list = [date_list[:second_sunday_index]] if second_sunday_index else []
-    chunked_date_list.extend([date_list[i:i + 14] for i in range(second_sunday_index, len(date_list), 14)])
+    chunks = []
+
+    start_date = datetime.date(year, 1, 1)
+    end_of_year = datetime.date(year, 12, 31)
+
+    # первый чанк (если 1 января не воскресенье)
+    if start_date.weekday() != 6:  # 6 = Sunday
+        chunk = []
+        current = start_date
+
+        while current.weekday() != 5 and current <= end_of_year:  # 5 = Saturday
+            chunk.append(format_day(current))
+            current += datetime.timedelta(days=1)
+
+        if current <= end_of_year:
+            chunk.append(format_day(current))  # суббота
+
+        chunks.append(chunk)
+        start_date = current + datetime.timedelta(days=1)
+
+    # основные 14-дневные чанки (вс → сб)
+    while start_date <= end_of_year:
+        chunk = []
+
+        for _ in range(14):
+            if start_date > end_of_year:
+                break
+            chunk.append(format_day(start_date))
+            start_date += datetime.timedelta(days=1)
+
+        chunks.append(chunk)
 
     if full_list:
-        return chunked_date_list
-    else:
-        # Получаем текущую дату
-        today = datetime.datetime.now()
+        return chunks
 
-        # Находим, в какой чанк попадает текущая дата
-        for chunk in chunked_date_list:
-            # Получаем первую дату в чанк
-            chunk_start_date = datetime.datetime(year, month_names.index(chunk[0][0]) + 1, int(chunk[0][2]))
+    # возвращаем текущий чанк
+    for chunk in chunks:
+        start = datetime.date(
+            year,
+            month_names.index(chunk[0][0]) + 1,
+            int(chunk[0][2]),
+        )
+        end = start + datetime.timedelta(days=len(chunk))
 
-            # Проверяем, попадает ли сегодняшняя дата в этот чанк
-            if chunk_start_date <= today < chunk_start_date + datetime.timedelta(days=14):
-                return chunk
+        if start <= today < end:
+            return chunk
 
-        return chunked_date_list[-1]  # В случае, если дата не попала в чанк, возвращаем последний чанк
-
+    return chunks[-1]
