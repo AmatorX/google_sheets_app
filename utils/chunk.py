@@ -6,7 +6,9 @@ def create_chunk_data(full_list=False):
     """
     14-дневные чанки:
     - стандартно: воскресенье → суббота (14 дней)
-    - первый чанк может быть короче (с 1 января до первой субботы)
+    - первый чанк:
+        * неполная первая неделя (с 1 января до первой субботы)
+        * + следующая неделя до субботы
     - последний чанк может быть короче (обрезается 31 декабря)
     """
     today = datetime.date.today()
@@ -31,13 +33,17 @@ def create_chunk_data(full_list=False):
     if start_date.weekday() != 6:  # 6 = Sunday
         chunk = []
         current = start_date
+        saturdays_found = 0
 
-        while current.weekday() != 5 and current <= end_of_year:  # 5 = Saturday
+        while current <= end_of_year:
             chunk.append(format_day(current))
-            current += datetime.timedelta(days=1)
 
-        if current <= end_of_year:
-            chunk.append(format_day(current))  # суббота
+            if current.weekday() == 5:  # Saturday
+                saturdays_found += 1
+                if saturdays_found == 2:
+                    break
+
+            current += datetime.timedelta(days=1)
 
         chunks.append(chunk)
         start_date = current + datetime.timedelta(days=1)
